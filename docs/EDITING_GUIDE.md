@@ -63,7 +63,7 @@ rect(10, 7, 10, 9, 'stone');
 | `characters/` | 主角的四个朝向、NPC 和敌人 | 主角正面 `heroDown.png`、哨兵 `enemy.png` |
 
 - **直接换图**。想改遗迹的石墙，可以替换 [`tiles/ruinWall.png`](../public/art/world/tiles/ruinWall.png)。替换树、角色等立绘时，先对照原图尺寸和透明区域，把物件保留在画布里原来的位置。
-- **改绘图脚本**。要让改动可以重新生成，编辑 [`tools/draw_pixel_art.py`](../tools/draw_pixel_art.py) 里绘制对应素材的函数，再从仓库根目录运行下面的命令。脚本会写入 `public/art/world/` 的 25 张户外素材和 `archive/art/` 的 10 张归档素材。归档放在 Vite 的静态资源目录之外，[`study/`](../archive/art/study/) 保存旧书房的地块和家具，[`effects/`](../archive/art/effects/) 保存备用萤火虫。脚本会覆盖同名图片，若要保留手工修改，可先备份。
+- **改绘图脚本**。要让改动可以重新生成，编辑 [`tools/draw_pixel_art.py`](../tools/draw_pixel_art.py) 里绘制对应素材的函数，再从仓库根目录运行下面的命令。脚本会写入 `public/art/world/` 的 25 张户外素材，并顺带生成 `archive/art/` 下的 10 张归档素材（旧书房的地块家具和备用萤火虫）。`archive/` 在 Vite 的静态资源目录之外，属于存档，仓库里目前没有这个目录，运行脚本时会自动创建。脚本会覆盖同名图片，若要保留手工修改，可先备份。
 
 ```powershell
 python tools/draw_pixel_art.py
