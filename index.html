@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tianle Yang's personal study. Mathematics, notes, and a door to another world." />
+    <meta name="theme-color" content="#11141c" />
+    <title>Tianle Yang · The Study</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#homepage-navigation">Skip to navigation</a>
+
+
+
+    <!-- 书房是一幅完整插画，物件按钮和轮廓共享图片坐标。 -->
+    <main>
+      <section class="study-view" id="study-view" aria-labelledby="page-title">
+        <header class="study-header">
+          <div class="study-identity">
+            <h1 id="page-title"><a href="./">Tianle Yang</a></h1>
+            <p>Mathematics · East China Normal University</p>
+          </div>
+          <nav id="homepage-navigation" aria-label="Homepage sections">
+            <a href="#profile" data-section="profile">About</a>
+            <a href="#notes" data-section="notes">Notes</a>
+            <a href="#news" data-section="news">News</a>
+            <a href="#quests" data-section="quests">Side quests</a>
+          </nav>
+        </header>
+        <div class="study-scene" id="study-scene" aria-label="Explore the objects in my study">
+          <div class="study-art" id="study-art"></div>
+          <p class="study-art-error" id="study-art-error" role="status" hidden>The illustration could not load. The links above are still open.</p>
+        </div>
+        <footer class="study-footer">
+          <span>© 2026 Tianle Yang</span>
+          <button type="button" class="adventure-link" data-enter-world>Enter the world</button>
+          <a href="mailto:10211510098@stu.ecnu.edu.cn">Contact</a>
+        </footer>
+      </section>
+
+
+
+      <!-- 出门才加载游戏；返回时保留同一个游戏实例。 -->
+      <section class="world-view wrap" id="world-view" aria-label="The world beyond the study" hidden>
+        <header class="world-header">
+          <button type="button" class="return-link" id="return-study">Back to the study</button>
+          <a href="#notes" data-section="notes">Mathematical notes</a>
+        </header>
+        <div class="game-frame">
+          <div class="game-bar">
+            <span class="area"><span class="area-light" aria-hidden="true"></span><span id="area-name"></span></span>
+            <div class="resources" id="resources">
+              <span id="lamp-status" hidden><span class="lamp-icon" aria-hidden="true">✧</span> <span id="lamp-label"></span></span>
+              <span><span class="heart" aria-hidden="true">♥</span> <span id="health" aria-label="Health"></span></span>
+            </div>
+          </div>
+          <div class="game-stage">
+            <div id="game" tabindex="-1" aria-label="Game scene. Use WASD or arrow keys to move, E to interact."></div>
+            <p id="loading" class="loading" role="status"></p>
+            <div class="world-error" id="world-error" role="alert" hidden>
+              <p id="world-error-message"></p>
+              <button type="button" class="secondary-button" data-enter-world>Try again</button>
+            </div>
+          </div>
+          <div class="game-footer">
+            <div class="game-message" aria-live="polite">
+              <p id="objective"></p>
+              <p id="prompt" hidden></p>
+            </div>
+            <div class="key-guide" aria-label="Keyboard controls">
+              <span><kbd>WASD</kbd> Move</span><span><kbd>E</kbd> Interact</span>
+            </div>
+          </div>
+          <div class="touch-controls" aria-label="Touch controls">
+            <div class="direction-pad">
+              <button type="button" data-dir="up" aria-label="Move up">▲</button>
+              <button type="button" data-dir="left" aria-label="Move left">◀</button>
+              <button type="button" data-dir="down" aria-label="Move down">▼</button>
+              <button type="button" data-dir="right" aria-label="Move right">▶</button>
+            </div>
+            <button type="button" class="interact-button" id="touch-interact">Interact</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+
+
+    <!-- 资料在桌面右侧展开，手机上占据大部分屏幕。 -->
+    <dialog class="panel reading-panel" id="section-dialog" aria-labelledby="section-title">
+      <div class="panel-inner">
+        <button type="button" class="close-button" id="close-section" aria-label="Close section">×</button>
+        <div id="section-body"></div>
+      </div>
+    </dialog>
+    <dialog class="panel encounter" id="encounter-dialog" aria-labelledby="encounter-title" aria-describedby="encounter-description">
+      <div class="panel-inner">
+        <p class="panel-kicker" id="encounter-kicker"></p>
+        <h2 id="encounter-title"></h2>
+        <p id="encounter-description"></p>
+        <div class="encounter-actions">
+          <button type="button" class="secondary-button" id="cancel-encounter"></button>
+          <button type="button" class="primary-button" id="confirm-encounter"></button>
+        </div>
+      </div>
+    </dialog>
+
+
+
+    <!-- 无 JavaScript 时仍可前往原来的学术主页。 -->
+    <noscript><p class="wrap">Enable JavaScript to explore, or visit the <a href="https://www.tianleyang.com/">academic homepage</a> for notes and contact information.</p></noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
