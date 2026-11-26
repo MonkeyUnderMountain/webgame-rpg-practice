@@ -24,6 +24,7 @@
             <a href="#profile" data-section="profile">About</a>
             <a href="#notes" data-section="notes">Notes</a>
             <a href="#news" data-section="news">News</a>
+            <a href="#research" data-section="research">Research</a>
             <a href="#quests" data-section="quests">Side quests</a>
           </nav>
         </header>
@@ -32,7 +33,18 @@
           <p class="study-art-error" id="study-art-error" role="status" hidden>The illustration could not load. The links above are still open.</p>
         </div>
         <footer class="study-footer">
-          <span>© 2026 Tianle Yang</span>
+          <div class="study-footer-meta">
+            <div class="footer-line">
+              <span>© 2026 Tianle Yang</span>
+              <button type="button" class="music-toggle" id="music-toggle" aria-pressed="false" aria-label="Play background music">
+                <span class="music-icon" aria-hidden="true">♪</span> <span id="music-text">Music off</span>
+              </button>
+            </div>
+            <span class="music-credit">
+              Music: <a href="https://pixabay.com/music/ambient-medieval-abbey-182197/" target="_blank" rel="noopener noreferrer">Medieval Abbey</a>
+              — matthewmikemusic, <a href="https://pixabay.com/service/license-summary/" target="_blank" rel="noopener noreferrer">Pixabay Content License</a>
+            </span>
+          </div>
           <button type="button" class="adventure-link" data-enter-world>Enter the world</button>
           <a href="mailto:10211510098@stu.ecnu.edu.cn">Contact</a>
         </footer>
@@ -83,6 +95,12 @@
         </div>
       </section>
     </main>
+
+
+
+    <audio id="study-music" loop preload="none" aria-hidden="true">
+      <source src="./audio/study/medieval-abbey.mp3" type="audio/mpeg" />
+    </audio>
 
 
 

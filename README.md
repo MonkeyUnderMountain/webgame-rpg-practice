@@ -13,6 +13,8 @@ npm.cmd run dev
 
 Open the local address Vite prints. In the study, click an object or select it with **Tab** and **Enter**. Outdoors, move with WASD or the arrow keys and press **E** to interact. Touch screens have direction buttons and **Interact**. Return through the waystation door to read in the study and resume the same adventure. Refreshing or closing the page ends the run.
 
+Use **Music** in the footer to play the optional background track. It is off by default. The current track is *Medieval Abbey* by matthewmikemusic (Pixabay Content License). The footer keeps the track, artist, and license credit.
+
 Run `npm.cmd run build` to type-check the project and generate the static site in `dist/`.
 
 ## Where to start

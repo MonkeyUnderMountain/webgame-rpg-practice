@@ -22,20 +22,20 @@
 
 保存后从书房出门。先走过原来的格子，再走到旅人身边按 **E**，确认能说话，向旅人所在的格子走时会被挡住。选择新位置时，在旁边留一格可走的地面，方便访客靠近。
 
-## 4. 对齐书房物件的点击范围
+## 4. 调整书房热点与轮廓
 
-书房底图是 [`public/art/study/study.png`](../public/art/study/study.png)。在 [`src/study.ts`](../src/study.ts) 中，`studyImage` 记录原图宽高，`studyHotspots` 记录五个物件。以书桌为例，找到 `id: 'profile'`。`label` 是按钮的名称，`x`、`y`、`width`、`height` 都是相对于**完整原图**的百分比，左上角是 `(0, 0)`。
+书房底图是 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)（1672×941）。热点数据在 [`src/study-hotspots.json`](../src/study-hotspots.json)，按 **557×313 逻辑像素**记录六个多边形：`1 News`、`2 Research`、`3 About`、`4 Notes`、`5 Side Quests`、`6 Enter`。
 
-| 字段 | 用原图中的像素坐标换算 |
-| --- | --- | --- |
-| `x`、`y` | 框的左边距 ÷ 原图宽，框的上边距 ÷ 原图高，各乘 100。 |
-| `width`、`height` | 框的宽度 ÷ 原图宽，框的高度 ÷ 原图高，各乘 100。 |
+[`src/study.ts`](../src/study.ts) 读取这些点，计算每个多边形的包围盒、SVG 轮廓和 `clip-path`；悬停或按 `Tab` 时显示金色轮廓和标签。六个热点共用一个 `viewBox="0 0 557 313"` 的 SVG，轮廓随底图缩放。
 
-以目前的书桌为例，原图宽 1672 像素，书桌的框从左边第 72 像素起、宽 574 像素，所以 `x` 为 `4.30622`，`width` 为 `34.33014`。用图片编辑器量框时也把轮廓线的宽度算进去。
+调整某个物件时：
 
-每个热点还有一张同 `id` 的透明轮廓 PNG。在图片编辑器里给物件画轮廓，然后以**点击范围的同一个矩形**裁切透明图层。五张轮廓都导出到 [`public/art/study/outlines/`](../public/art/study/outlines/)，例如书桌保存为 `profile.png`，房门保存为 `door.png`。保留裁切框里围绕轮廓的透明像素，让它在浏览器里叠回原来的位置。
+1. 用 `npm.cmd run dev` 打开 [`label-tool.html`](../artwork/homepage-concepts/preview/label-tool.html)。
+2. 用 **Line / Brush / Fill** 修边界，导出 `label-map.png`。
+3. 按 557×313 的像素坐标更新 `src/study-hotspots.json` 中对应 label 的 `polygons`。
+4. 刷新首页，用鼠标和 `Tab` 各选一次六个物件，在桌面和手机宽度下检查轮廓、标签和点击区域。
 
-换整张插图时，先用新图的像素宽高更新 `studyImage`，再为五个物件重新量框并导出轮廓。保存后用鼠标和 `Tab` 各选一次对应物件，在宽屏和窄屏上检查轮廓是否贴合，最后点击确认打开正确的资料或游戏。
+旧的 `public/art/study/outlines/*.png` 是上一版五热点的遗留资产，当前 `study.ts` 不再读取它们。
 
 ## 5. 在遗迹里接通一条路
 
@@ -70,6 +70,12 @@ python tools/draw_pixel_art.py
 ```
 
 新增户外素材时，把 PNG 放进相应目录，并在 [`src/art.ts`](../src/art.ts) 的对应分类下登记文件名（省略 `.png`）。地图和场景用这个名字引用纹理。换图后刷新，确认图像清晰，位置和碰撞范围对得上。首页插图和热点轮廓按第 4 节的方法对齐。
+
+## 7. 更换书房背景音乐
+
+书房底部的 **Music** 开关控制 [`public/audio/study/medieval-abbey.mp3`](../public/audio/study/medieval-abbey.mp3)。播放、淡入淡出和切到后台标签页时暂停都在 [`src/music.ts`](../src/music.ts)；按钮和 `<audio>` 元素在 [`index.html`](../index.html)。默认关闭，浏览器不会自动播放。
+
+当前曲目是 matthewmikemusic 的 *Medieval Abbey*，来自 [Pixabay](https://pixabay.com/music/ambient-medieval-abbey-182197/)，按 [Pixabay Content License](https://pixabay.com/service/license-summary/) 使用。该许可证不强制署名，但本站仍在页脚保留曲名、作者和许可证链接；换曲时同时更新 `<audio>` 的源文件和页脚 `music-credit`。如果新曲使用不同许可证，按该许可证更新署名。
 
 ## 改完怎么验收
 

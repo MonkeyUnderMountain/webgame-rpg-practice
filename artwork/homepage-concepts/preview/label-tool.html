@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mage Study · Label Tool 557×313</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --zoom: 3;
+      --label-opacity: 0.58;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      background: #0b0d12;
+      color: #e8e2d7;
+      font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .app {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 16px 18px 30px;
+    }
+    h1 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+    .hint { margin: 0 0 12px; color: #9b9aa5; }
+    .hint code { color: #edc38b; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 10px 12px;
+      border: 1px solid #2d303a;
+      background: #141822;
+    }
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-right: 12px;
+      border-right: 1px solid #2d303a;
+    }
+    .group:last-child { border-right: 0; padding-right: 0; }
+    .group-label { color: #8d8c98; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+    button, select, input[type="range"] { font: inherit; }
+    button {
+      border: 1px solid #3a3e4a;
+      background: #202532;
+      color: #e8e2d7;
+      padding: 5px 9px;
+      cursor: pointer;
+    }
+    button:hover { border-color: #edc38b; }
+    button.active { border-color: #edc38b; background: #3a3020; color: #ffe0b0; }
+    button.label-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+    }
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border: 1px solid #0008;
+      border-radius: 2px;
+    }
+    .workspace {
+      margin-top: 12px;
+      overflow: auto;
+      max-height: calc(100vh - 250px);
+      border: 1px solid #2d303a;
+      background:
+        linear-gradient(45deg, #151820 25%, transparent 25%),
+        linear-gradient(-45deg, #151820 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #151820 75%),
+        linear-gradient(-45deg, transparent 75%, #151820 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+    .stage {
+      position: relative;
+      width: calc(557px * var(--zoom));
+      height: calc(313px * var(--zoom));
+      image-rendering: pixelated;
+      touch-action: none;
+    }
+    .stage canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    #baseCanvas { z-index: 0; }
+    #labelCanvas {
+      z-index: 1;
+      opacity: var(--label-opacity);
+      cursor: crosshair;
+      touch-action: none;
+    }
+    #previewCanvas {
+      z-index: 2;
+      pointer-events: none;
+    }
+    #edgeCanvas {
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    .status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 10px;
+      color: #aaa8b3;
+    }
+    .status b { color: #f0d2a0; font-weight: 600; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-top: 8px;
+      color: #c8c4bc;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend i { width: 10px; height: 10px; display: inline-block; border: 1px solid #0008; }
+    .error {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid #a35454;
+      background: #2a171b;
+      color: #ffc9c9;
+    }
+    .error.visible { display: block; }
+    .small { color: #7e7d88; font-size: 12px; }
+    @media (max-width: 760px) {
+      .app { padding: 12px 10px 24px; }
+      .group { border-right: 0; padding-right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Mage Study · Label Tool</h1>
+    <p class="hint">
+      逻辑像素 <b>557×313</b>。当前起点是你第三次导出的 <code>3-label-map.png</code>。
+      用 <b>Brush</b> 修细节，<b>Line</b> 拖直线，<b>Fill</b> 换整块区域。
+      曲线可以用多条短线接起来。
+      请用 <code>npm.cmd run dev</code> 打开 Vite 地址，否则浏览器可能不允许读取画布像素。
+    </p>
+
+    <div class="toolbar">
+      <div class="group">
+        <span class="group-label">Label</span>
+        <button type="button" class="label-btn active" data-label="0"><span class="swatch" style="background:#000"></span>0 背景</button>
+        <button type="button" class="label-btn" data-label="1"><span class="swatch" style="background:#3ad7ff"></span>1 News</button>
+        <button type="button" class="label-btn" data-label="2"><span class="swatch" style="background:#59e28a"></span>2 Research</button>
+        <button type="button" class="label-btn" data-label="3"><span class="swatch" style="background:#ffd27a"></span>3 About</button>
+        <button type="button" class="label-btn" data-label="4"><span class="swatch" style="background:#ff9a78"></span>4 Notes</button>
+        <button type="button" class="label-btn" data-label="5"><span class="swatch" style="background:#d68cff"></span>5 Side Quests</button>
+        <button type="button" class="label-btn" data-label="6"><span class="swatch" style="background:#ff7aa8"></span>6 Enter</button>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Tool</span>
+        <button type="button" id="brushBtn" class="active">Brush</button>
+        <button type="button" id="lineBtn">Line</button>
+        <button type="button" id="fillBtn">Fill</button>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Brush</span>
+        <button type="button" class="size-btn" data-size="1">1</button>
+        <button type="button" class="size-btn active" data-size="2">2</button>
+        <button type="button" class="size-btn" data-size="4">4</button>
+        <button type="button" class="size-btn" data-size="8">8</button>
+      </div>
+
+      <div class="group">
+        <span class="group-label">View</span>
+        <label><input type="checkbox" id="showBase" checked> 底图</label>
+        <label><input type="checkbox" id="showEdges" checked> 边界</label>
+        <label>标签透明度 <input type="range" id="opacity" min="0" max="100" value="58"></label>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Zoom</span>
+        <input type="number" id="zoom" min="1" max="16" step="1" value="3" style="width:58px">
+        <span>×</span>
+      </div>
+
+      <div class="group">
+        <button type="button" id="undoBtn">Undo</button>
+        <button type="button" id="resetBtn">Reset</button>
+        <button type="button" id="exportBtn">Export label-map.png</button>
+      </div>
+    </div>
+
+    <div class="workspace" id="workspace">
+      <div class="stage" id="stage">
+        <canvas id="baseCanvas" width="557" height="313"></canvas>
+        <canvas id="labelCanvas" width="557" height="313"></canvas>
+        <canvas id="previewCanvas" width="557" height="313"></canvas>
+        <canvas id="edgeCanvas" width="557" height="313"></canvas>
+      </div>
+    </div>
+
+    <div class="status">
+      <span>坐标：<b id="pos">—</b></span>
+      <span>当前标签：<b id="currentLabel">0 背景</b></span>
+      <span>笔刷：<b id="currentSize">2</b> px</span>
+      <span id="message" class="small"></span>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:#000"></i>0 背景</span>
+      <span><i style="background:#3ad7ff"></i>1 News</span>
+      <span><i style="background:#59e28a"></i>2 Research</span>
+      <span><i style="background:#ffd27a"></i>3 About</span>
+      <span><i style="background:#ff9a78"></i>4 Notes</span>
+      <span><i style="background:#d68cff"></i>5 Side Quests</span>
+      <span><i style="background:#ff7aa8"></i>6 Enter</span>
+    </div>
+
+    <div class="error" id="error"></div>
+  </main>
+
+  <script>
+    const W = 557;
+    const H = 313;
+    const COLORS = {
+      0: [0, 0, 0],
+      1: [58, 215, 255],
+      2: [89, 226, 138],
+      3: [255, 210, 122],
+      4: [255, 154, 120],
+      5: [214, 140, 255],
+      6: [255, 122, 168],
+    };
+    const LABEL_NAMES = {
+      0: '背景',
+      1: 'News',
+      2: 'Research',
+      3: 'About',
+      4: 'Notes',
+      5: 'Side Quests',
+      6: 'Enter',
+    };
+
+    const stage = document.getElementById('stage');
+    const workspace = document.getElementById('workspace');
+    const baseCanvas = document.getElementById('baseCanvas');
+    const labelCanvas = document.getElementById('labelCanvas');
+    const previewCanvas = document.getElementById('previewCanvas');
+    const edgeCanvas = document.getElementById('edgeCanvas');
+    const baseCtx = baseCanvas.getContext('2d');
+    const labelCtx = labelCanvas.getContext('2d');
+    const previewCtx = previewCanvas.getContext('2d');
+    const edgeCtx = edgeCanvas.getContext('2d');
+    const pos = document.getElementById('pos');
+    const currentLabelEl = document.getElementById('currentLabel');
+    const currentSizeEl = document.getElementById('currentSize');
+    const message = document.getElementById('message');
+    const errorBox = document.getElementById('error');
+
+    let labels = new Uint8Array(W * H);
+    let firstPass = new Uint8Array(W * H);
+    let selectedLabel = 0;
+    let brushSize = 2;
+    let tool = 'brush';
+    let painting = false;
+    let lineStart = null;
+    let lineEnd = null;
+    let undoStack = [];
+
+    const colorKey = (r, g, b) => `${r},${g},${b}`;
+    const colorMap = new Map(
+      Object.entries(COLORS).map(([id, rgb]) => [colorKey(...rgb), Number(id)]),
+    );
+
+    function setMessage(text) {
+      message.textContent = text;
+      window.clearTimeout(setMessage.timer);
+      setMessage.timer = window.setTimeout(() => { message.textContent = ''; }, 2400);
+    }
+
+    function showError(text) {
+      errorBox.textContent = text;
+      errorBox.classList.add('visible');
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error(`Could not load ${src}`));
+        image.src = src;
+      });
+    }
+
+    async function init() {
+      try {
+        const [baseImage, labelImage] = await Promise.all([
+          loadImage('./study-557x313.png'),
+          loadImage('../3-label-map.png'),
+        ]);
+        baseCtx.imageSmoothingEnabled = false;
+        baseCtx.drawImage(baseImage, 0, 0, W, H);
+
+        const temp = document.createElement('canvas');
+        temp.width = W;
+        temp.height = H;
+        const tempCtx = temp.getContext('2d', { willReadFrequently: true });
+        tempCtx.imageSmoothingEnabled = false;
+        tempCtx.drawImage(labelImage, 0, 0, W, H);
+        let data;
+        try {
+          data = tempCtx.getImageData(0, 0, W, H).data;
+        } catch (error) {
+          showError('浏览器阻止了读取画布像素。请用 npm run dev 启动 Vite，再打开这个页面。');
+          throw error;
+        }
+        for (let i = 0; i < W * H; i += 1) {
+          const key = colorKey(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+          labels[i] = colorMap.get(key) ?? 0;
+        }
+        firstPass = labels.slice();
+        redrawAll();
+      } catch (error) {
+        console.error(error);
+        showError('初始化失败。请确认 study-557x313.png 和 ../3-label-map.png 可访问，并用 Vite 打开。');
+      }
+    }
+
+    function redrawLabels() {
+      const imageData = labelCtx.createImageData(W, H);
+      const out = imageData.data;
+      for (let i = 0; i < W * H; i += 1) {
+        const [r, g, b] = COLORS[labels[i]];
+        out[i * 4] = r;
+        out[i * 4 + 1] = g;
+        out[i * 4 + 2] = b;
+        out[i * 4 + 3] = labels[i] === 0 ? 0 : 255;
+      }
+      labelCtx.putImageData(imageData, 0, 0);
+    }
+
+    function redrawEdges() {
+      const imageData = edgeCtx.createImageData(W, H);
+      const out = imageData.data;
+      for (let y = 0; y < H; y += 1) {
+        for (let x = 0; x < W; x += 1) {
+          const i = y * W + x;
+          const value = labels[i];
+          let edge = false;
+          if (x > 0 && labels[i - 1] !== value) edge = true;
+          if (x < W - 1 && labels[i + 1] !== value) edge = true;
+          if (y > 0 && labels[i - W] !== value) edge = true;
+          if (y < H - 1 && labels[i + W] !== value) edge = true;
+          if (edge && value !== 0) {
+            out[i * 4] = 255;
+            out[i * 4 + 1] = 246;
+            out[i * 4 + 2] = 220;
+            out[i * 4 + 3] = 210;
+          }
+        }
+      }
+      edgeCtx.putImageData(imageData, 0, 0);
+    }
+
+    function redrawAll() {
+      clearPreview();
+      redrawLabels();
+      redrawEdges();
+    }
+
+    function clearPreview() {
+      previewCtx.clearRect(0, 0, W, H);
+    }
+
+    function bresenham(x0, y0, x1, y1, callback) {
+      let x = x0;
+      let y = y0;
+      const dx = Math.abs(x1 - x0);
+      const sx = x0 < x1 ? 1 : -1;
+      const dy = -Math.abs(y1 - y0);
+      const sy = y0 < y1 ? 1 : -1;
+      let error = dx + dy;
+      while (true) {
+        callback(x, y);
+        if (x === x1 && y === y1) break;
+        const step = 2 * error;
+        if (step >= dy) {
+          error += dy;
+          x += sx;
+        }
+        if (step <= dx) {
+          error += dx;
+          y += sy;
+        }
+      }
+    }
+
+    function drawPreviewLine() {
+      clearPreview();
+      if (!lineStart || !lineEnd) return;
+      if (selectedLabel === 0) {
+        previewCtx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      } else {
+        const [r, g, b] = COLORS[selectedLabel];
+        previewCtx.fillStyle = `rgba(${r} ${g} ${b} / 0.78)`;
+      }
+      const half = Math.floor(brushSize / 2);
+      bresenham(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y, (x, y) => {
+        for (let dy = -half; dy < brushSize - half; dy += 1) {
+          for (let dx = -half; dx < brushSize - half; dx += 1) {
+            const px = x + dx;
+            const py = y + dy;
+            if (px >= 0 && py >= 0 && px < W && py < H) {
+              previewCtx.fillRect(px, py, 1, 1);
+            }
+          }
+        }
+      });
+    }
+
+    function snapshot() {
+      undoStack.push(labels.slice());
+      if (undoStack.length > 30) undoStack.shift();
+    }
+
+    function undo() {
+      const previous = undoStack.pop();
+      if (!previous) {
+        setMessage('没有可撤销的操作');
+        return;
+      }
+      labels = previous;
+      redrawAll();
+    }
+
+    function paintPixel(x, y, value) {
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      const i = y * W + x;
+      if (labels[i] === value) return;
+      labels[i] = value;
+      if (value === 0) {
+        labelCtx.clearRect(x, y, 1, 1);
+      } else {
+        const [r, g, b] = COLORS[value];
+        labelCtx.fillStyle = `rgb(${r} ${g} ${b})`;
+        labelCtx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    function paintAt(x, y) {
+      const half = Math.floor(brushSize / 2);
+      for (let dy = -half; dy < brushSize - half; dy += 1) {
+        for (let dx = -half; dx < brushSize - half; dx += 1) {
+          paintPixel(x + dx, y + dy, selectedLabel);
+        }
+      }
+    }
+
+    function floodFill(x, y) {
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      const target = labels[y * W + x];
+      if (target === selectedLabel) return;
+      const stack = [[x, y]];
+      while (stack.length) {
+        const [cx, cy] = stack.pop();
+        if (cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
+        const i = cy * W + cx;
+        if (labels[i] !== target) continue;
+        labels[i] = selectedLabel;
+        stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+      }
+      redrawAll();
+    }
+
+    function logicalPoint(event) {
+      const rect = labelCanvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) / rect.width * W);
+      const y = Math.floor((event.clientY - rect.top) / rect.height * H);
+      return { x, y };
+    }
+
+    labelCanvas.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) return;
+      const { x, y } = logicalPoint(event);
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      snapshot();
+      painting = true;
+      labelCanvas.setPointerCapture(event.pointerId);
+      if (tool === 'fill') {
+        floodFill(x, y);
+        painting = false;
+      } else if (tool === 'line') {
+        lineStart = { x, y };
+        lineEnd = { x, y };
+        drawPreviewLine();
+      } else {
+        paintAt(x, y);
+      }
+    });
+
+    labelCanvas.addEventListener('pointermove', (event) => {
+      const { x, y } = logicalPoint(event);
+      pos.textContent = `${x}, ${y}`;
+      if (!painting) return;
+      if (tool === 'line') {
+        lineEnd = {
+          x: Math.max(0, Math.min(W - 1, x)),
+          y: Math.max(0, Math.min(H - 1, y)),
+        };
+        drawPreviewLine();
+        return;
+      }
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      paintAt(x, y);
+    });
+
+    labelCanvas.addEventListener('pointerup', () => {
+      if (!painting) return;
+      painting = false;
+      if (tool === 'line' && lineStart && lineEnd) {
+        bresenham(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y, (x, y) => paintAt(x, y));
+        lineStart = null;
+        lineEnd = null;
+        clearPreview();
+      }
+      redrawEdges();
+    });
+
+    labelCanvas.addEventListener('pointercancel', () => {
+      if (!painting) return;
+      painting = false;
+      lineStart = null;
+      lineEnd = null;
+      clearPreview();
+      redrawEdges();
+    });
+
+    for (const button of document.querySelectorAll('[data-label]')) {
+      button.addEventListener('click', () => {
+        selectedLabel = Number(button.dataset.label);
+        for (const other of document.querySelectorAll('[data-label]')) {
+          other.classList.toggle('active', other === button);
+        }
+        currentLabelEl.textContent = `${selectedLabel} ${LABEL_NAMES[selectedLabel]}`;
+      });
+    }
+
+    for (const button of document.querySelectorAll('.size-btn')) {
+      button.addEventListener('click', () => {
+        brushSize = Number(button.dataset.size);
+        for (const other of document.querySelectorAll('.size-btn')) {
+          other.classList.toggle('active', other === button);
+        }
+        currentSizeEl.textContent = String(brushSize);
+      });
+    }
+
+    function selectTool(next) {
+      tool = next;
+      document.getElementById('brushBtn').classList.toggle('active', next === 'brush');
+      document.getElementById('lineBtn').classList.toggle('active', next === 'line');
+      document.getElementById('fillBtn').classList.toggle('active', next === 'fill');
+      labelCanvas.style.cursor = next === 'fill' ? 'cell' : 'crosshair';
+      if (next !== 'line') {
+        lineStart = null;
+        lineEnd = null;
+        clearPreview();
+      }
+    }
+
+    document.getElementById('brushBtn').addEventListener('click', () => selectTool('brush'));
+    document.getElementById('lineBtn').addEventListener('click', () => selectTool('line'));
+    document.getElementById('fillBtn').addEventListener('click', () => selectTool('fill'));
+
+    document.getElementById('showBase').addEventListener('change', (event) => {
+      baseCanvas.style.opacity = event.target.checked ? '1' : '0.22';
+    });
+
+    document.getElementById('showEdges').addEventListener('change', (event) => {
+      edgeCanvas.style.display = event.target.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('opacity').addEventListener('input', (event) => {
+      stage.style.setProperty('--label-opacity', String(Number(event.target.value) / 100));
+    });
+
+    document.getElementById('zoom').addEventListener('change', (event) => {
+      const value = Math.min(16, Math.max(1, Number(event.target.value) || 3));
+      event.target.value = String(value);
+      stage.style.setProperty('--zoom', String(value));
+    });
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      snapshot();
+      labels = firstPass.slice();
+      redrawAll();
+      setMessage('已回到第三次导出起点');
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = W;
+      exportCanvas.height = H;
+      const exportCtx = exportCanvas.getContext('2d');
+      const imageData = exportCtx.createImageData(W, H);
+      const out = imageData.data;
+      for (let i = 0; i < W * H; i += 1) {
+        const [r, g, b] = COLORS[labels[i]];
+        out[i * 4] = r;
+        out[i * 4 + 1] = g;
+        out[i * 4 + 2] = b;
+        out[i * 4 + 3] = 255;
+      }
+      exportCtx.putImageData(imageData, 0, 0);
+      exportCanvas.toBlob((blob) => {
+        if (!blob) {
+          showError('导出失败。');
+          return;
+        }
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'label-map.png';
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }, 'image/png');
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
+      if (event.key >= '0' && event.key <= '6') {
+        const button = document.querySelector(`[data-label="${event.key}"]`);
+        button?.click();
+      } else if (event.key === 'b' || event.key === 'B') {
+        document.getElementById('brushBtn').click();
+      } else if (event.key === 'l' || event.key === 'L') {
+        document.getElementById('lineBtn').click();
+      } else if (event.key === 'f' || event.key === 'F') {
+        document.getElementById('fillBtn').click();
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undo();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import '@fontsource/pixelify-sans/latin-500.css';
 import '@fontsource-variable/space-grotesk';
 import './style.css';
 import gameInterface from '../content/game/interface.json';
+import { mountMusic } from './music';
 import { mountReadingPanel } from './readingPanel';
 import { mountStudy } from './study';
 import type { Direction, Encounter, GameCallbacks, GameControls } from './game';
@@ -176,6 +177,7 @@ element('touch-interact').addEventListener('click', () => controls?.interact());
 
 // 先创建插图上的链接和房门，再绑定它们；最后同步访客打开的栏目锚点。
 mountStudy(element('study-scene'), element('study-art'));
+mountMusic(element<HTMLAudioElement>('study-music'), element<HTMLButtonElement>('music-toggle'));
 for (const [id, text] of Object.entries(gameInterface.labels)) {
   element(id).textContent = text;
 }

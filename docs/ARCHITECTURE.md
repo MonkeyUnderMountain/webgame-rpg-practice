@@ -3,8 +3,8 @@
 ## 点击书架时，哪段代码打开 Notes？
 
 1. [网页入口](../index.html) 定义书房、导航、阅读面板、游戏画布容器、战斗弹窗和触屏按钮。[页面入口](../src/main.ts) 启动时调用 `mountStudy()` 和 `mountReadingPanel()`。
-2. [书房模块](../src/study.ts) 把底图和五个热点放进同一个容器。每个热点有相对原图的百分比坐标和大小，悬停或用 **Tab** 聚焦时会显示同名 PNG 轮廓。桌面尽量铺满画面并保住所有热点，手机显示整幅画。[书房美术](../public/art/study/)
-3. 书架和顶部的 **Notes** 都是指向 `#notes` 的链接。[阅读面板模块](../src/readingPanel.ts) 用 Vite 的 `?raw` 导入四份 HTML，并按栏目 ID 选择内容。无论点击哪个入口，还是直接访问带 `#notes` 的网址，打开的都是同一份[笔记](../content/home/notes.html)。原站 PDF 在新标签页打开。
+2. [书房模块](../src/study.ts) 把底图和六个热点放进同一个容器。热点数据在 [study-hotspots.json](../src/study-hotspots.json) 中按 557×313 逻辑像素记录；模块计算每个多边形的包围盒、SVG 轮廓和 `clip-path`，悬停或按 **Tab** 聚焦时显示金色轮廓与标签。桌面铺满画面，手机显示整幅画。[书房美术](../public/art/study/mage/)
+3. 书架和顶部的 **Notes** 都是指向 `#notes` 的链接。[阅读面板模块](../src/readingPanel.ts) 用 Vite 的 `?raw` 导入五份 HTML，并按栏目 ID 选择内容。无论点击哪个入口，还是直接访问带 `#notes` 的网址，打开的都是同一份[笔记](../content/home/notes.html)。原站 PDF 在新标签页打开。
 4. 桌面阅读面板贴在画面右侧，手机上占据大部分屏幕。桌面和手机布局、轮廓和正文样式都在 [style.css](../src/style.css)。
 
 ## 打开房门时，游戏从哪里开始？

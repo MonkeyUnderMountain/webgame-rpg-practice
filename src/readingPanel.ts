@@ -1,12 +1,13 @@
 import profile from '../content/home/profile.html?raw';
 import notes from '../content/home/notes.html?raw';
 import news from '../content/home/news.html?raw';
+import research from '../content/home/research.html?raw';
 import quests from '../content/home/quests.html?raw';
 
 
 
 // 书房物件、导航和网址锚点共用栏目 ID。正文直接编辑对应的 HTML。
-const sections = { profile, notes, news, quests };
+const sections = { profile, notes, news, research, quests };
 type SectionId = keyof typeof sections;
 
 function isSectionId(id: string | undefined): id is SectionId {
