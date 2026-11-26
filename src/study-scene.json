@@ -1,0 +1,177 @@
+{
+  "baseWidth": 960,
+  "baseHeight": 540,
+  "exportScale": 2,
+  "exportWidth": 1920,
+  "exportHeight": 1080,
+  "background": "study.png",
+  "hotspotMask": "hotspots.png",
+  "props": [
+    {
+      "id": "chalkboard-diagram",
+      "label": "Chalkboard Diagram",
+      "x": 219,
+      "y": 58,
+      "width": 166,
+      "height": 166,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "diagram_1",
+      "states": [
+        {
+          "id": "diagram_1",
+          "src": "props/chalkboard-d1.png",
+          "frames": 1,
+          "frameDurationMs": 180,
+          "caption": "I · Projective Geometry"
+        },
+        {
+          "id": "diagram_2",
+          "src": "props/chalkboard-d2.png",
+          "frames": 1,
+          "frameDurationMs": 180,
+          "caption": "II · Snake Lemma & Pullback"
+        },
+        {
+          "id": "diagram_3",
+          "src": "props/chalkboard-d3.png",
+          "frames": 1,
+          "frameDurationMs": 180,
+          "caption": "III · Torus & Trefoil Knot"
+        }
+      ]
+    },
+    {
+      "id": "chalk-tray",
+      "label": "Chalk · Redraw Board",
+      "x": 238,
+      "y": 235,
+      "width": 121,
+      "height": 13,
+      "zIndex": 4,
+      "interactive": true,
+      "priority": 12,
+      "labelBelow": true,
+      "outline": "all",
+      "action": {
+        "type": "cycle-target",
+        "targetProp": "chalkboard-diagram",
+        "storageKey": "study:chalkboard-diagram"
+      },
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/chalk-tray.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "candle-column",
+      "label": "Pillar Candle",
+      "x": 162,
+      "y": 106,
+      "width": 21,
+      "height": 48,
+      "zIndex": 3,
+      "interactive": true,
+      "priority": 13,
+      "labelBelow": true,
+      "outline": "all",
+      "action": {
+        "type": "toggle-state",
+        "fxSelector": ".fx-candle-column",
+        "storageKey": "study:candle-column"
+      },
+      "defaultState": "lit",
+      "states": [
+        {
+          "id": "lit",
+          "src": "props/candle-column-lit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": true
+        },
+        {
+          "id": "unlit",
+          "src": "props/candle-column-unlit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": false
+        }
+      ]
+    },
+    {
+      "id": "candle-desk",
+      "label": "Desk Candle",
+      "x": 335,
+      "y": 287,
+      "width": 17,
+      "height": 50,
+      "zIndex": 3,
+      "interactive": true,
+      "priority": 14,
+      "labelBelow": false,
+      "outline": "all",
+      "action": {
+        "type": "toggle-state",
+        "fxSelector": ".fx-candle-desk",
+        "storageKey": "study:candle-desk"
+      },
+      "defaultState": "lit",
+      "states": [
+        {
+          "id": "lit",
+          "src": "props/candle-desk-lit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": true
+        },
+        {
+          "id": "unlit",
+          "src": "props/candle-desk-unlit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": false
+        }
+      ]
+    },
+    {
+      "id": "candle-bench",
+      "label": "Window Candle",
+      "x": 741,
+      "y": 296,
+      "width": 16,
+      "height": 40,
+      "zIndex": 3,
+      "interactive": true,
+      "priority": 15,
+      "labelBelow": false,
+      "outline": "all",
+      "action": {
+        "type": "toggle-state",
+        "fxSelector": ".fx-candle-bench",
+        "storageKey": "study:candle-bench"
+      },
+      "defaultState": "lit",
+      "states": [
+        {
+          "id": "lit",
+          "src": "props/candle-bench-lit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": true
+        },
+        {
+          "id": "unlit",
+          "src": "props/candle-bench-unlit.png",
+          "frames": 4,
+          "frameDurationMs": 180,
+          "fxActive": false
+        }
+      ]
+    }
+  ]
+}

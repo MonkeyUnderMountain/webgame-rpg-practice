@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mage Study · Label Tool 557×313</title>
+  <title>Mage Study · Hotspot Mask 960×540</title>
   <style>
     :root {
       color-scheme: dark;
-      --zoom: 3;
+      --zoom: 1;
       --label-opacity: 0.58;
     }
     * { box-sizing: border-box; }
@@ -80,8 +80,8 @@
     }
     .stage {
       position: relative;
-      width: calc(557px * var(--zoom));
-      height: calc(313px * var(--zoom));
+      width: calc(960px * var(--zoom));
+      height: calc(540px * var(--zoom));
       image-rendering: pixelated;
       touch-action: none;
     }
@@ -143,12 +143,15 @@
 </head>
 <body>
   <main class="app">
-    <h1>Mage Study · Label Tool</h1>
+    <h1>Mage Study · Hotspot Mask</h1>
     <p class="hint">
-      逻辑像素 <b>557×313</b>。当前起点是你第三次导出的 <code>3-label-map.png</code>。
-      用 <b>Brush</b> 修细节，<b>Line</b> 拖直线，<b>Fill</b> 换整块区域。
-      曲线可以用多条短线接起来。
-      请用 <code>npm.cmd run dev</code> 打开 Vite 地址，否则浏览器可能不允许读取画布像素。
+      基准网格 <b>960×540</b>，底图是 <code>public/art/study/mage/study.png</code>（1920×1080 导出），
+      起点是当前的 <code>hotspots.png</code>（960×540）。
+      先选标签，用 <b>Brush</b> 沿物体边缘收紧，<b>0 背景</b>就是橡皮，<b>Line</b> 拖直线，
+      <b>Fill</b> 换封闭区域，<b>Wand</b> 按底图颜色选整块（从 tol 8 左右开始，选区过大就降低）。
+      金色轮廓预览与首页一致（Notes 只描最大的岛，右侧烛台只参与点击）。完成后点 <b>Save hotspots.png</b>，覆盖
+      <code>public/art/study/mage/hotspots.png</code>。
+      请用 <code>npm.cmd run dev</code> 打开 Vite 地址，否则浏览器不允许读取画布像素。
     </p>
 
     <div class="toolbar">
@@ -160,7 +163,7 @@
         <button type="button" class="label-btn" data-label="3"><span class="swatch" style="background:#ffd27a"></span>3 About</button>
         <button type="button" class="label-btn" data-label="4"><span class="swatch" style="background:#ff9a78"></span>4 Notes</button>
         <button type="button" class="label-btn" data-label="5"><span class="swatch" style="background:#d68cff"></span>5 Side Quests</button>
-        <button type="button" class="label-btn" data-label="6"><span class="swatch" style="background:#ff7aa8"></span>6 Enter</button>
+        <button type="button" class="label-btn" data-label="6"><span class="swatch" style="background:#ff7aa8"></span>6 Look outside</button>
       </div>
 
       <div class="group">
@@ -168,6 +171,13 @@
         <button type="button" id="brushBtn" class="active">Brush</button>
         <button type="button" id="lineBtn">Line</button>
         <button type="button" id="fillBtn">Fill</button>
+        <button type="button" id="wandBtn">Wand</button>
+      </div>
+
+      <div class="group">
+        <span class="group-label">Wand tol</span>
+        <input type="range" id="tolerance" min="0" max="40" value="8">
+        <span id="toleranceValue">8</span>
       </div>
 
       <div class="group">
@@ -176,6 +186,7 @@
         <button type="button" class="size-btn active" data-size="2">2</button>
         <button type="button" class="size-btn" data-size="4">4</button>
         <button type="button" class="size-btn" data-size="8">8</button>
+        <button type="button" class="size-btn" data-size="16">16</button>
       </div>
 
       <div class="group">
@@ -187,23 +198,23 @@
 
       <div class="group">
         <span class="group-label">Zoom</span>
-        <input type="number" id="zoom" min="1" max="16" step="1" value="3" style="width:58px">
+        <input type="number" id="zoom" min="0.5" max="3" step="0.25" value="1" style="width:58px">
         <span>×</span>
       </div>
 
       <div class="group">
         <button type="button" id="undoBtn">Undo</button>
-        <button type="button" id="resetBtn">Reset</button>
-        <button type="button" id="exportBtn">Export label-map.png</button>
+        <button type="button" id="resetBtn">Reset to file</button>
+        <button type="button" id="exportBtn">Save hotspots.png</button>
       </div>
     </div>
 
     <div class="workspace" id="workspace">
       <div class="stage" id="stage">
-        <canvas id="baseCanvas" width="557" height="313"></canvas>
-        <canvas id="labelCanvas" width="557" height="313"></canvas>
-        <canvas id="previewCanvas" width="557" height="313"></canvas>
-        <canvas id="edgeCanvas" width="557" height="313"></canvas>
+        <canvas id="baseCanvas" width="960" height="540"></canvas>
+        <canvas id="labelCanvas" width="960" height="540"></canvas>
+        <canvas id="previewCanvas" width="960" height="540"></canvas>
+        <canvas id="edgeCanvas" width="960" height="540"></canvas>
       </div>
     </div>
 
@@ -221,15 +232,16 @@
       <span><i style="background:#ffd27a"></i>3 About</span>
       <span><i style="background:#ff9a78"></i>4 Notes</span>
       <span><i style="background:#d68cff"></i>5 Side Quests</span>
-      <span><i style="background:#ff7aa8"></i>6 Enter</span>
+      <span><i style="background:#ff7aa8"></i>6 Look outside</span>
     </div>
 
     <div class="error" id="error"></div>
   </main>
 
-  <script>
-    const W = 557;
-    const H = 313;
+  <script type="module">
+    import { maskFromLabels, traceLabel } from '/src/hotspotMask.ts';
+    const W = 960;
+    const H = 540;
     const COLORS = {
       0: [0, 0, 0],
       1: [58, 215, 255],
@@ -246,7 +258,7 @@
       3: 'About',
       4: 'Notes',
       5: 'Side Quests',
-      6: 'Enter',
+      6: 'Look outside',
     };
 
     const stage = document.getElementById('stage');
@@ -273,12 +285,14 @@
     let painting = false;
     let lineStart = null;
     let lineEnd = null;
+    let lastPoint = null;
     let undoStack = [];
 
     const colorKey = (r, g, b) => `${r},${g},${b}`;
     const colorMap = new Map(
       Object.entries(COLORS).map(([id, rgb]) => [colorKey(...rgb), Number(id)]),
     );
+    let basePixels = null;
 
     function setMessage(text) {
       message.textContent = text;
@@ -303,11 +317,12 @@
     async function init() {
       try {
         const [baseImage, labelImage] = await Promise.all([
-          loadImage('./study-557x313.png'),
-          loadImage('../3-label-map.png'),
+          loadImage('/art/study/mage/study.png'),
+          loadImage('/art/study/mage/hotspots.png').catch(() => loadImage('../label-map.png')),
         ]);
         baseCtx.imageSmoothingEnabled = false;
         baseCtx.drawImage(baseImage, 0, 0, W, H);
+        basePixels = baseCtx.getImageData(0, 0, W, H).data;
 
         const temp = document.createElement('canvas');
         temp.width = W;
@@ -330,7 +345,7 @@
         redrawAll();
       } catch (error) {
         console.error(error);
-        showError('初始化失败。请确认 study-557x313.png 和 ../3-label-map.png 可访问，并用 Vite 打开。');
+        showError('初始化失败。请确认 study.png 和 hotspots.png 可访问，并用 Vite 打开。');
       }
     }
 
@@ -348,26 +363,23 @@
     }
 
     function redrawEdges() {
-      const imageData = edgeCtx.createImageData(W, H);
-      const out = imageData.data;
-      for (let y = 0; y < H; y += 1) {
-        for (let x = 0; x < W; x += 1) {
-          const i = y * W + x;
-          const value = labels[i];
-          let edge = false;
-          if (x > 0 && labels[i - 1] !== value) edge = true;
-          if (x < W - 1 && labels[i + 1] !== value) edge = true;
-          if (y > 0 && labels[i - W] !== value) edge = true;
-          if (y < H - 1 && labels[i + W] !== value) edge = true;
-          if (edge && value !== 0) {
-            out[i * 4] = 255;
-            out[i * 4 + 1] = 246;
-            out[i * 4 + 2] = 220;
-            out[i * 4 + 3] = 210;
-          }
+      edgeCtx.clearRect(0, 0, W, H);
+      const mask = maskFromLabels(labels, W, H, 7);
+      edgeCtx.strokeStyle = 'rgba(246, 215, 166, 0.92)';
+      edgeCtx.lineWidth = 2;
+      edgeCtx.lineJoin = 'round';
+      for (let label = 1; label <= 6; label += 1) {
+        const contours = traceLabel(mask, label);
+        const outline = label === 4 ? contours.slice(0, 1) : contours;
+        for (const contour of outline) {
+          const points = contour.points;
+          edgeCtx.beginPath();
+          edgeCtx.moveTo(points[0], points[1]);
+          for (let i = 2; i < points.length; i += 2) edgeCtx.lineTo(points[i], points[i + 1]);
+          edgeCtx.closePath();
+          edgeCtx.stroke();
         }
       }
-      edgeCtx.putImageData(imageData, 0, 0);
     }
 
     function redrawAll() {
@@ -428,7 +440,7 @@
 
     function snapshot() {
       undoStack.push(labels.slice());
-      if (undoStack.length > 30) undoStack.shift();
+      if (undoStack.length > 12) undoStack.shift();
     }
 
     function undo() {
@@ -468,14 +480,89 @@
       if (x < 0 || y < 0 || x >= W || y >= H) return;
       const target = labels[y * W + x];
       if (target === selectedLabel) return;
+      if (target === 0 && selectedLabel !== 0) {
+        setMessage('Fill 不能直接填背景大区域，请用 Brush 沿边缘涂。');
+        return;
+      }
       const stack = [[x, y]];
       while (stack.length) {
-        const [cx, cy] = stack.pop();
-        if (cx < 0 || cy < 0 || cx >= W || cy >= H) continue;
-        const i = cy * W + cx;
-        if (labels[i] !== target) continue;
-        labels[i] = selectedLabel;
-        stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+        const [startX, startY] = stack.pop();
+        let left = startX;
+        while (left > 0 && labels[startY * W + left - 1] === target) left -= 1;
+        let right = startX;
+        while (right < W - 1 && labels[startY * W + right + 1] === target) right += 1;
+        for (let cx = left; cx <= right; cx += 1) labels[startY * W + cx] = selectedLabel;
+        for (const nextY of [startY - 1, startY + 1]) {
+          if (nextY < 0 || nextY >= H) continue;
+          let cx = left;
+          while (cx <= right) {
+            while (cx <= right && labels[nextY * W + cx] !== target) cx += 1;
+            if (cx > right) break;
+            stack.push([cx, nextY]);
+            while (cx <= right && labels[nextY * W + cx] === target) cx += 1;
+          }
+        }
+      }
+      redrawAll();
+    }
+
+    function paintLine(x0, y0, x1, y1) {
+      bresenham(x0, y0, x1, y1, (x, y) => paintAt(x, y));
+    }
+
+    function wandFill(x, y) {
+      if (!basePixels) return;
+      const seed = (y * W + x) * 4;
+      const seedR = basePixels[seed];
+      const seedG = basePixels[seed + 1];
+      const seedB = basePixels[seed + 2];
+      const tolerance = Number(document.getElementById('tolerance').value);
+      const limit = tolerance * tolerance * 3;
+      const maxArea = 400000;
+      let selected = 0;
+      let tooLarge = false;
+      const visited = new Uint8Array(W * H);
+      const matches = (px, py) => {
+        const i = (py * W + px) * 4;
+        const dr = basePixels[i] - seedR;
+        const dg = basePixels[i + 1] - seedG;
+        const db = basePixels[i + 2] - seedB;
+        return dr * dr + dg * dg + db * db <= limit;
+      };
+      const stack = [[x, y]];
+      while (stack.length && !tooLarge) {
+        const [startX, startY] = stack.pop();
+        if (visited[startY * W + startX]) continue;
+        let left = startX;
+        while (left > 0 && !visited[startY * W + left - 1] && matches(left - 1, startY)) left -= 1;
+        let right = startX;
+        while (right < W - 1 && !visited[startY * W + right + 1] && matches(right + 1, startY)) right += 1;
+        for (let cx = left; cx <= right; cx += 1) {
+          const i = startY * W + cx;
+          if (visited[i]) continue;
+          visited[i] = 1;
+          labels[i] = selectedLabel;
+          selected += 1;
+          if (selected > maxArea) { tooLarge = true; break; }
+        }
+        if (tooLarge) break;
+        for (const nextY of [startY - 1, startY + 1]) {
+          if (nextY < 0 || nextY >= H) continue;
+          let cx = left;
+          while (cx <= right) {
+            while (cx <= right && (visited[nextY * W + cx] || !matches(cx, nextY))) cx += 1;
+            if (cx > right) break;
+            stack.push([cx, nextY]);
+            while (cx <= right && !visited[nextY * W + cx] && matches(cx, nextY)) cx += 1;
+          }
+        }
+      }
+      if (tooLarge) {
+        const previous = undoStack.pop();
+        if (previous) labels = previous;
+        redrawAll();
+        setMessage('Wand 选区超过 40 万像素，已撤销；请降低 Wand tol 或改用 Brush。');
+        return;
       }
       redrawAll();
     }
@@ -497,11 +584,15 @@
       if (tool === 'fill') {
         floodFill(x, y);
         painting = false;
+      } else if (tool === 'wand') {
+        wandFill(x, y);
+        painting = false;
       } else if (tool === 'line') {
         lineStart = { x, y };
         lineEnd = { x, y };
         drawPreviewLine();
       } else {
+        lastPoint = { x, y };
         paintAt(x, y);
       }
     });
@@ -519,12 +610,15 @@
         return;
       }
       if (x < 0 || y < 0 || x >= W || y >= H) return;
-      paintAt(x, y);
+      if (lastPoint) paintLine(lastPoint.x, lastPoint.y, x, y);
+      else paintAt(x, y);
+      lastPoint = { x, y };
     });
 
     labelCanvas.addEventListener('pointerup', () => {
       if (!painting) return;
       painting = false;
+      lastPoint = null;
       if (tool === 'line' && lineStart && lineEnd) {
         bresenham(lineStart.x, lineStart.y, lineEnd.x, lineEnd.y, (x, y) => paintAt(x, y));
         lineStart = null;
@@ -537,6 +631,7 @@
     labelCanvas.addEventListener('pointercancel', () => {
       if (!painting) return;
       painting = false;
+      lastPoint = null;
       lineStart = null;
       lineEnd = null;
       clearPreview();
@@ -568,7 +663,8 @@
       document.getElementById('brushBtn').classList.toggle('active', next === 'brush');
       document.getElementById('lineBtn').classList.toggle('active', next === 'line');
       document.getElementById('fillBtn').classList.toggle('active', next === 'fill');
-      labelCanvas.style.cursor = next === 'fill' ? 'cell' : 'crosshair';
+      document.getElementById('wandBtn').classList.toggle('active', next === 'wand');
+      labelCanvas.style.cursor = next === 'fill' || next === 'wand' ? 'cell' : 'crosshair';
       if (next !== 'line') {
         lineStart = null;
         lineEnd = null;
@@ -579,6 +675,7 @@
     document.getElementById('brushBtn').addEventListener('click', () => selectTool('brush'));
     document.getElementById('lineBtn').addEventListener('click', () => selectTool('line'));
     document.getElementById('fillBtn').addEventListener('click', () => selectTool('fill'));
+    document.getElementById('wandBtn').addEventListener('click', () => selectTool('wand'));
 
     document.getElementById('showBase').addEventListener('change', (event) => {
       baseCanvas.style.opacity = event.target.checked ? '1' : '0.22';
@@ -592,8 +689,12 @@
       stage.style.setProperty('--label-opacity', String(Number(event.target.value) / 100));
     });
 
+    document.getElementById('tolerance').addEventListener('input', (event) => {
+      document.getElementById('toleranceValue').textContent = event.target.value;
+    });
+
     document.getElementById('zoom').addEventListener('change', (event) => {
-      const value = Math.min(16, Math.max(1, Number(event.target.value) || 3));
+      const value = Math.min(2, Math.max(0.25, Number(event.target.value) || 0.5));
       event.target.value = String(value);
       stage.style.setProperty('--zoom', String(value));
     });
@@ -603,10 +704,10 @@
       snapshot();
       labels = firstPass.slice();
       redrawAll();
-      setMessage('已回到第三次导出起点');
+      setMessage('已回到 hotspots.png 的初始状态');
     });
 
-    document.getElementById('exportBtn').addEventListener('click', () => {
+    function maskCanvas() {
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = W;
       exportCanvas.height = H;
@@ -621,16 +722,38 @@
         out[i * 4 + 3] = 255;
       }
       exportCtx.putImageData(imageData, 0, 0);
-      exportCanvas.toBlob((blob) => {
+      return exportCanvas;
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      maskCanvas().toBlob(async (blob) => {
         if (!blob) {
           showError('导出失败。');
           return;
         }
+        const suggested = 'hotspots.png';
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: suggested,
+              types: [{ description: 'PNG mask', accept: { 'image/png': ['.png'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            setMessage('已保存。请确认文件是 public/art/study/mage/hotspots.png');
+            return;
+          } catch (error) {
+            if (error && error.name === 'AbortError') return;
+            console.warn(error);
+          }
+        }
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'label-map.png';
+        link.download = suggested;
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        setMessage('已下载。请移到 public/art/study/mage/hotspots.png');
       }, 'image/png');
     });
 
@@ -645,6 +768,11 @@
         document.getElementById('lineBtn').click();
       } else if (event.key === 'f' || event.key === 'F') {
         document.getElementById('fillBtn').click();
+      } else if (event.key === 'w' || event.key === 'W') {
+        document.getElementById('wandBtn').click();
+      } else if (event.key === 'e' || event.key === 'E') {
+        document.querySelector('[data-label="0"]').click();
+        document.getElementById('brushBtn').click();
       } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         undo();

@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "art:export": "node scripts/export-study.mjs",
+    "art:init": "node scripts/export-study.mjs --init"
   },
   "dependencies": {
-    "@fontsource/pixelify-sans": "^5.2.0",
+    "@fontsource-variable/eb-garamond": "^5.3.0",
     "@fontsource-variable/space-grotesk": "^5.2.0",
-    "phaser": "3.90.0"
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/pixelify-sans": "^5.2.0"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

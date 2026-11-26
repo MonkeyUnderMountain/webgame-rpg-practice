@@ -1,92 +1,82 @@
 # 修改指南
 
-先启动[本地开发服务器](../README.md#run-locally)，打开 Vite 打印的地址。改文件后浏览器可能会刷新，当前游戏进度也会随之结束。
+先启动[本地开发服务器](../README.md#run-locally)，打开 Vite 打印的地址。
 
-## 1. 修改一条数学笔记
+## 1. 修改数学笔记或其他栏目
 
-打开 [`content/home/notes.html`](../content/home/notes.html)。文件开头是面板的眉题和标题，正文里每段 `<article>` 是一条笔记。例如，找到 `Hodge Index Theorem via Linear Algebra` 那一段，改 `<h3>` 里的标题、`<p>` 里的简介，或者把 `<a href="…">` 里的地址换成新 PDF 的完整网址。新增笔记时可以复制一段 `<article>` 再改这三处。沿用链接上的 `target="_blank"` 和 `rel="noopener noreferrer"`。PDF 会在新标签页打开，游戏页面和本局进度还在。
+五个栏目各对应 `content/home/` 下的一份 HTML：
 
-顶部的 **Notes** 和房间里的书架读取的是同一段内容。保存后，两种入口都点一次，再打开 PDF 确认地址正确。也可以直接打开本地地址加 `#notes`，检查访客从分享链接能否进入笔记面板。
-
-另外三个栏目也各有一份 HTML。个人简介在 [`profile.html`](../content/home/profile.html)，研讨班时间和地点在 [`news.html`](../content/home/news.html)，项目和小说链接在 [`quests.html`](../content/home/quests.html)。
-
-## 2. 改游戏对白或战斗预览
-
-打开 [`content/game/world.json`](../content/game/world.json)。要改落脚点旅人的第一句对白，展开 `waystation → wayfarer → beforeCrossing`，修改右侧引号里的文字。走过隐桥后再找旅人聊天，显示的是同组的 `afterCrossing`。遗迹的断桥提示在 `ruin → bridge`，其中 `lampPrompt` 是持灯时显示的操作提示。触发对白的时机、取得灯和点亮桥的条件都在 [`src/game.ts`](../src/game.ts)。
-
-战斗预览写在 [`content/game/interface.json`](../content/game/interface.json) 的 `encounter` 中。`canWin` 用于能承受伤害的情况，`tooDangerous` 用于血量不足的情况。改措辞时，保留 `{damage}` 和 `{health}` 两个占位符。走近哨兵并打开预览，可以看到页面填入本次预计伤害和玩家当前血量。
-
-## 3. 移动落脚点的旅人
-
-在 [maps.ts](../src/game/maps.ts) 找到 `WAYFARER`。坐标按 `[列, 行]` 排列，向右列数增加，向下行数增加。例如，把 `[10, 10]` 改成 `[11, 10]`，旅人就会向右移动一格。[游戏场景](../src/game.ts) 的 `drawWaystation()` 用这一处坐标摆放人物、占用地块并注册对话位置。
-
-保存后从书房出门。先走过原来的格子，再走到旅人身边按 **E**，确认能说话，向旅人所在的格子走时会被挡住。选择新位置时，在旁边留一格可走的地面，方便访客靠近。
-
-## 4. 调整书房热点与轮廓
-
-书房底图是 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)（1672×941，96 色像素版）。热点数据在 [`src/study-hotspots.json`](../src/study-hotspots.json)，按 **557×313 逻辑像素**记录六个多边形：`1 News`、`2 Research`、`3 About`、`4 Notes`、`5 Side Quests`、`6 Enter`。当前线上数据与 [`label-polygons-v5.json`](../artwork/homepage-concepts/preview/label-polygons-v5.json) 相同。
-
-[`src/study.ts`](../src/study.ts) 读取这些点，计算每个多边形的包围盒、SVG 轮廓和 `clip-path`；悬停或按 `Tab` 时显示金色轮廓和标签。六个热点共用一个 `viewBox="0 0 557 313"` 的 SVG，轮廓随底图缩放。
-
-调整某个物件时：
-
-1. 用 `npm.cmd run dev` 启动后，打开 Vite 地址下的 `/artwork/homepage-concepts/preview/label-tool.html`。
-2. 用 **Line / Brush / Fill** 修边界，导出 `label-map.png`。
-3. 按 557×313 的像素坐标更新 `src/study-hotspots.json` 中对应 label 的 `polygons`。
-4. 刷新首页，用鼠标和 `Tab` 各选一次六个物件，在桌面和手机宽度下检查轮廓、标签和点击区域。
-
-`public/art/study/` 现在只保留 `mage/study.png`；旧版 `study.png` 和 `outlines/` 已移除。
-
-## 5. 在遗迹里接通一条路
-
-地图定义在 [`src/game/maps.ts`](../src/game/maps.ts) 的 `layout()`。左上角的格子是 `[0, 0]`。地图有 32 列、17 行，每格 24 像素。`rect(left, top, right, bottom, tile)` 会填满矩形，包含右端和下端。后画的地块会覆盖先画的地块，所以放置顺序很重要。
-
-例如，遗迹左侧的下层大厅在第 9 行有地面，上方通道在第 7 行有地面。可以在遗迹分支的普通地块之后、`if (sideGateOpen)` 之前加下面一行，补上中间缺的那一格。
-
-```ts
-rect(10, 7, 10, 9, 'stone');
-```
-
-从 `[10, 9]` 往上走到 `[10, 7]`，确认这条路能双向通过。`stone` 是可通行地形，墙和深渊会挡路。即使地面类型可走，场景里用 `block()` 标出来的格子仍会挡路。想调整走路速度，可以查看 [`src/game/movement.ts`](../src/game/movement.ts) 的 `WALK_SPEED`，单位是像素每秒。改动后也走一遍原来的灯和隐桥路线，确认新路没有跳过原本要找的能力。
-
-如果后续要加一张地图，先看 `maps.ts` 的 `Area` 和 `layout()`，再看[游戏场景](../src/game.ts)的 `drawArea()` 怎样按区域绘制。地点名称和任务提示放在 `content/game/world.json`。参考 `drawWaystation()` 和 `drawRuin()` 里的 `portal()` 成对添加游戏内的出入口，两端都要选可走的落脚格。落脚点通往书房的门由页面处理。
-
-## 6. 换一张游戏像素图
-
-在 [`public/art/world/`](../public/art/world/) 里按要改的对象找图。
-
-| 目录 | 用途 | 例子 |
+| 栏目 | 书房物件 | 文件 |
 | --- | --- | --- |
-| `tiles/` | 铺地图用的 24 × 24 像素地块 | 石墙 `ruinWall.png`、桥面 `bridge.png` |
-| `scenery/` | 摆在地图上的布景 | 树 `tree.png`、路牌 `sign.png` |
-| `objects/` | 门、道具和互动提示 | 传送门 `portal.png`、灯 `lamp.png` |
-| `characters/` | 主角的四个朝向、NPC 和敌人 | 主角正面 `heroDown.png`、哨兵 `enemy.png` |
+| About | 书桌 | [`content/home/profile.html`](../content/home/profile.html) |
+| Notes | 书架 | [`content/home/notes.html`](../content/home/notes.html) |
+| News | 布告栏 | [`content/home/news.html`](../content/home/news.html) |
+| Research | 黑板 | [`content/home/research.html`](../content/home/research.html) |
+| Side quests | 长凳 | [`content/home/quests.html`](../content/home/quests.html) |
 
-- **直接换图**。想改遗迹的石墙，可以替换 [`tiles/ruinWall.png`](../public/art/world/tiles/ruinWall.png)。替换树、角色等立绘时，先对照原图尺寸和透明区域，把物件保留在画布里原来的位置。
-- **改绘图脚本**。要让改动可以重新生成，编辑 [`tools/draw_pixel_art.py`](../tools/draw_pixel_art.py) 里绘制对应素材的函数，再从仓库根目录运行下面的命令。脚本会写入 `public/art/world/` 的 25 张户外素材，并顺带生成 `archive/art/` 下的 10 张归档素材（旧书房的地块家具和备用萤火虫）。`archive/` 在 Vite 的静态资源目录之外，属于存档，仓库里目前没有这个目录，运行脚本时会自动创建。脚本会覆盖同名图片，若要保留手工修改，可先备份。
+以修改笔记为例：打开 [`content/home/notes.html`](../content/home/notes.html)，文件开头是卷轴眉题和标题，正文里每段 `<article>` 是一条笔记。修改标题、简介或 PDF 链接，或者复制一段 `<article>` 新增条目。沿用外链上的 `target="_blank"` 和 `rel="noopener noreferrer"`，PDF 会在新标签页打开。
 
-```powershell
-python tools/draw_pixel_art.py
-```
+保存后，分别从书房物件、顶部导航以及直接访问 `#notes` 锚点各打开一次，确认排版与链接正常。
 
-新增户外素材时，把 PNG 放进相应目录，并在 [`src/art.ts`](../src/art.ts) 的对应分类下登记文件名（省略 `.png`）。地图和场景用这个名字引用纹理。换图后刷新，确认图像清晰，位置和碰撞范围对得上。首页插图和热点轮廓按第 4 节的方法对齐。
+## 2. 更换门外的风景照
 
-## 7. 更换书房背景音乐
+目前点击房门或页脚的 **Look outside** 会打开一张暮色占位图（[`public/art/study/mage/beyond.svg`](../public/art/study/mage/beyond.svg)）。以后想换成真实风景照或新画的像素风景时：
+
+1. 把图片放进 `public/art/study/mage/`（例如 `beyond.jpg` 或 `beyond.png`，推荐 16:9 横图）。
+2. 打开 [`index.html`](../index.html)，找到 `#door-dialog` 里的 `<figure class="door-figure">`，把 `<img src="./art/study/mage/beyond.svg" ...>` 改成新文件名，并更新 `alt`、`width`/`height` 和 `<figcaption>` 说明文字。
+3. 刷新首页，点房门与页脚按钮检查画框显示和移动端缩放。
+
+## 3. 用 Aseprite 修改可替换零件、帧动画与热点
+
+书房采用 **`960×540`（16:9）基准网格、导出 `2×`（`1920×1080`）** 的 2D 分层工作流：
+
+- **Aseprite 主工程**：[`artwork/study/study-master.aseprite`](../artwork/study/study-master.aseprite)（`960×540`，4 帧循环动画，每帧 `180ms`）。
+- **一键导出命令**：在项目根目录运行 `npm.cmd run art:export`，脚本 [`scripts/export-study.mjs`](../scripts/export-study.mjs) 会调用本机 Aseprite CLI 执行 [`scripts/export-study.lua`](../scripts/export-study.lua)：
+  1. 将 `00_room_base` 按 `2×` 整数放大导出为 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)（1920×1080）；
+  2. 将 `99_hotspot_mask` 导出为 [`public/art/study/mage/hotspots.png`](../public/art/study/mage/hotspots.png)（960×540）；
+  3. 自动计算每个零件图层在 `960×540` 画布上的非透明像素最小包围盒 `(x, y, width, height)`，裁剪透明边并按 `2×` 导出单帧 PNG 或多帧横向 Sprite Sheet 到 `public/art/study/mage/props/`；
+  4. 自动更新 [`src/study-scene.json`](../src/study-scene.json)，无需手工填写任何坐标。
+
+### 在 Aseprite 中修改现有零件或新增零件
+
+1. 用 Aseprite 打开 `artwork/study/study-master.aseprite`：
+   - `30_chalkboard` 组内包含 `prop_chalkboard_d1`、`prop_chalkboard_d2`、`prop_chalkboard_d3`（三套可切换黑板数学图）以及 `prop_chalk_tray`（黑板下沿粉笔与板擦触发区）；
+   - `80_candles` 组内包含石柱、书桌、长凳三支蜡烛的 `*_lit`（4 帧跳动火苗）与 `*_unlit`（4 帧袅袅青烟）图层；
+   - 若想新增一个自定义静态或动画零件，只需新建一个以 `prop_` 开头的图层（例如 `prop_crow` 或 `prop_bookshelf`），在 `960×540` 画布对应位置绘制即可。
+2. 保存 `.aseprite` 文件后，在终端运行：
+   ```powershell
+   npm.cmd run art:export
+   ```
+3. **自动命中与金色描边**：对于 `study-scene.json` 中 `interactive: true` 的独立零件，[`src/study.ts`](../src/study.ts) 会直接读取该零件 PNG 的 `Alpha ≥ 16` 不透明像素写入 `960×540` 命中掩膜，并用 Marching Squares 自动追踪出悬停金色轮廓——**只要在 Aseprite 里改了零件形状并导出，网页上的点击区域和金色描边会自动跟着更新**。
+
+### 调整六大主栏目的基础掩膜（`hotspots.png`）
+
+六大主栏目（`1 News`、`2 Research`、`3 About`、`4 Notes`、`5 Side Quests`、`6 Look outside`）的基础命中掩膜位于 `public/art/study/mage/hotspots.png`（`960×540`）。你可以直接在 Aseprite 中打开并编辑 `study-master.aseprite` 的 `99_hotspot_mask` 图层后运行 `npm.cmd run art:export`，也可以使用网页标注工作台：
+
+1. 用 `npm.cmd run dev` 启动后，打开 Vite 地址下的 `/artwork/homepage-concepts/preview/label-tool.html`（`960×540` 网格）。
+2. 选标签（**0 背景**就是橡皮），用 **Brush / Line / Fill / Wand** 沿物体边缘收紧。
+3. 点 **Save hotspots.png**，覆盖 `public/art/study/mage/hotspots.png`。刷新首页，访问 `?debug=hotspots` 可叠加显示全部栏目与微交互零件的掩膜和金色轮廓。
+
+## 4. 更换或压缩书房背景音乐
 
 书房底部的 **Music** 开关控制 [`public/audio/study/medieval-abbey.mp3`](../public/audio/study/medieval-abbey.mp3)。播放、淡入淡出和切到后台标签页时暂停都在 [`src/music.ts`](../src/music.ts)；按钮和 `<audio>` 元素在 [`index.html`](../index.html)。默认关闭，浏览器不会自动播放。
 
-当前曲目是 matthewmikemusic 的 *Medieval Abbey*，来自 [Pixabay](https://pixabay.com/music/ambient-medieval-abbey-182197/)，按 [Pixabay Content License](https://pixabay.com/service/license-summary/) 使用。该许可证不强制署名，但本站仍在页脚保留曲名、作者和许可证链接；换曲时同时更新 `<audio>` 的源文件和页脚 `music-credit`。如果新曲使用不同许可证，按该许可证更新署名。
+当前曲目是 matthewmikemusic 的 *Medieval Abbey*，来自 [Pixabay](https://pixabay.com/music/ambient-medieval-abbey-182197/)，按 [Pixabay Content License](https://pixabay.com/service/license-summary/) 使用。换曲时同步更新 `<audio>` 源文件和页脚 `music-credit`（以及 [`CREDITS.md`](../CREDITS.md)）。
+
+如果音频文件偏大，可在装有 `ffmpeg` 的环境里压缩到 128 kbps：
+
+```powershell
+ffmpeg -i public/audio/study/medieval-abbey.mp3 -codec:a libmp3lame -b:a 128k public/audio/study/medieval-abbey-128k.mp3
+```
 
 ## 改完怎么验收
 
-日常小改动先走一遍受影响的路径。改地图或互动时，可以按下面的顺序手测。
+1. 在书房刷新页面，观察初次加载时的柔光轮廓提示；用鼠标悬停或按 `Tab`，确认六个物件轮廓与标签对准。
+2. 分别从书房物件、顶部导航和 `#notes` 锚点打开阅读卷轴，确认居中排版、滚动条、外链和火漆关闭按钮（点击按钮、点遮罩、按 `Esc`）正常。
+3. 点击房门和页脚 **Look outside**，确认风景照弹窗能正常打开和关闭，关闭后焦点回到触发按钮。
+4. 在桌面宽度和手机宽度（≤ 760px）各检查一次，并测试页脚音乐开关。
 
-1. 在书房用鼠标悬停或按 `Tab`，观察书架轮廓。分别点击书架和导航的 **Notes**，应打开同一份资料。用桌面和手机宽度各检查一次。
-2. 点击房门，经落脚点进入遗迹。先看断桥，再去北边找哨兵。取消战斗预览时血量不变，确认时按预览扣血。另开一局还可以试用绞盘绕过哨兵。
-3. 拿到灯，回有记号的桥边按 `E`。先上桥再退回原岸，目标应仍要求过桥。再走到对岸，确认目标变成已完成。回到落脚点，经门返回书房。再点房门时，应从落脚点继续同一局，能力和已开的路仍在。
-4. 用手机或浏览器的触屏模拟，确认书房插图完整显示、按钮对准物件。进入游戏后，试方向键和 **Interact**，确认松开方向按钮时，人物停止移动。
-
-最后运行下面的命令。它会先做 TypeScript 类型检查，再生成 `dist/` 里的静态网页。地图能不能走通、互动位置合不合适，仍靠前面的实玩确认。
+最后运行构建命令，它会先做 TypeScript 类型检查，再在 `dist/` 生成根域名静态站点：
 
 ```powershell
 npm.cmd run build

@@ -22,14 +22,12 @@ function sectionFromHash(): SectionId | undefined {
 
 
 // 点击链接会添加历史记录。处理直接访问、后退和前进时，只同步面板。
-export function mountReadingPanel(
-  dialog: HTMLDialogElement,
-  canOpen: () => boolean,
-  onVisibilityChange: () => void,
-) {
+export function mountReadingPanel(dialog: HTMLDialogElement) {
   const body = dialog.querySelector<HTMLElement>('#section-body');
+  const sheet = dialog.querySelector<HTMLElement>('.scroll-sheet');
+  const shell = dialog.querySelector<HTMLElement>('.scroll-shell');
   const closeButton = dialog.querySelector<HTMLButtonElement>('#close-section');
-  if (!body || !closeButton) throw new Error('Missing reading panel body or close button');
+  if (!body || !sheet || !shell || !closeButton) throw new Error('Missing reading panel elements');
   const links = document.querySelectorAll<HTMLAnchorElement>('[data-section]');
 
   function markCurrentSection(id?: SectionId) {
@@ -42,15 +40,14 @@ export function mountReadingPanel(
   const showSection = (id: SectionId) => {
     body.innerHTML = sections[id];
     if (!dialog.open) dialog.showModal();
-    dialog.scrollTop = 0;
+    sheet.scrollTop = 0;
     markCurrentSection(id);
-    onVisibilityChange();
   };
 
   function syncWithLocation() {
     const id = sectionFromHash();
-    if (id && canOpen()) showSection(id);
-    else if (!id && dialog.open) dialog.close();
+    if (id) showSection(id);
+    else if (dialog.open) dialog.close();
   }
 
   for (const link of links) {
@@ -59,7 +56,6 @@ export function mountReadingPanel(
     link.addEventListener('click', (event) => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      if (!canOpen()) return;
       if (sectionFromHash() !== id) history.pushState(null, '', `#${id}`);
       showSection(id);
     });
@@ -69,11 +65,11 @@ export function mountReadingPanel(
 
 
 
-  // 原生 dialog 负责 Esc。点击遮罩或关闭按钮时也要同步网址和游戏暂停状态。
+  // 原生 dialog 负责 Esc。点击遮罩或关闭按钮时同步清除网址锚点。
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => {
     if (event.target !== dialog) return;
-    const bounds = dialog.getBoundingClientRect();
+    const bounds = shell.getBoundingClientRect();
     const outside = event.clientX < bounds.left || event.clientX > bounds.right
       || event.clientY < bounds.top || event.clientY > bounds.bottom;
     if (outside) dialog.close();
@@ -82,7 +78,6 @@ export function mountReadingPanel(
     if (dialog.open) return;
     if (sectionFromHash()) history.replaceState(null, '', `${location.pathname}${location.search}`);
     markCurrentSection();
-    onVisibilityChange();
   });
 
   syncWithLocation();
