@@ -24,18 +24,18 @@
 
 ## 4. 调整书房热点与轮廓
 
-书房底图是 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)（1672×941）。热点数据在 [`src/study-hotspots.json`](../src/study-hotspots.json)，按 **557×313 逻辑像素**记录六个多边形：`1 News`、`2 Research`、`3 About`、`4 Notes`、`5 Side Quests`、`6 Enter`。
+书房底图是 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)（1672×941，96 色像素版）。热点数据在 [`src/study-hotspots.json`](../src/study-hotspots.json)，按 **557×313 逻辑像素**记录六个多边形：`1 News`、`2 Research`、`3 About`、`4 Notes`、`5 Side Quests`、`6 Enter`。当前线上数据与 [`label-polygons-v5.json`](../artwork/homepage-concepts/preview/label-polygons-v5.json) 相同。
 
 [`src/study.ts`](../src/study.ts) 读取这些点，计算每个多边形的包围盒、SVG 轮廓和 `clip-path`；悬停或按 `Tab` 时显示金色轮廓和标签。六个热点共用一个 `viewBox="0 0 557 313"` 的 SVG，轮廓随底图缩放。
 
 调整某个物件时：
 
-1. 用 `npm.cmd run dev` 打开 [`label-tool.html`](../artwork/homepage-concepts/preview/label-tool.html)。
+1. 用 `npm.cmd run dev` 启动后，打开 Vite 地址下的 `/artwork/homepage-concepts/preview/label-tool.html`。
 2. 用 **Line / Brush / Fill** 修边界，导出 `label-map.png`。
 3. 按 557×313 的像素坐标更新 `src/study-hotspots.json` 中对应 label 的 `polygons`。
 4. 刷新首页，用鼠标和 `Tab` 各选一次六个物件，在桌面和手机宽度下检查轮廓、标签和点击区域。
 
-旧的 `public/art/study/outlines/*.png` 是上一版五热点的遗留资产，当前 `study.ts` 不再读取它们。
+`public/art/study/` 现在只保留 `mage/study.png`；旧版 `study.png` 和 `outlines/` 已移除。
 
 ## 5. 在遗迹里接通一条路
 
@@ -92,7 +92,9 @@ python tools/draw_pixel_art.py
 npm.cmd run build
 ```
 
-## 附录 · 书房原图的生成提示
+## 附录 · 早期现代书房原图的生成提示（历史）
+
+当前首页使用 [`public/art/study/mage/study.png`](../public/art/study/mage/study.png)。下面是更早一版现代书房的生成记录，仅作历史参考，不描述当前图像。
 
 插图由内置 ImageGen 生成，并在同一工具中调整为现代书房。轮廓根据最终成图另画。
 

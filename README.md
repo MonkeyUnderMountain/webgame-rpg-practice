@@ -17,6 +17,20 @@ Use **Music** in the footer to play the optional background track. It is off by 
 
 Run `npm.cmd run build` to type-check the project and generate the static site in `dist/`.
 
+## Project layout
+
+| Path | Contents |
+| --- | --- |
+| `index.html`, `src/` | Page, study hotspots, reading panel, and game |
+| `content/` | Editable HTML and game text |
+| `public/` | Runtime art and audio |
+| `docs/` | Architecture and editing guide |
+| `artwork/` | Concept and production files, not shipped |
+
+## Credits
+
+The code is MIT licensed. Music, homepage artwork, game sprites, and fonts are credited in [CREDITS.md](CREDITS.md).
+
 ## Where to start
 
 - Add a [mathematical note](content/home/notes.html), edit the [wayfarer’s dialogue](content/game/world.json), or move the NPC using `WAYFARER` in the [map coordinates](src/game/maps.ts). The [editing guide](docs/EDITING_GUIDE.md) walks through each change, plus maps, hotspots, and art.
