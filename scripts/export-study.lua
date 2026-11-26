@@ -1,9 +1,12 @@
 -- scripts/export-study.lua
 -- 从 artwork/study/study-master.aseprite (960×540) 自动裁剪并导出 2× (1920×1080) 资源，
--- 同时将各零件在 960×540 基准网格下的精确坐标与帧信息写入 src/study-scene.json。
+-- 同时将六大主栏目与所有模块化零件在 960×540 基准网格下的精确坐标写入 src/study-scene.json。
 
 local EXPORT_SCALE = 2
 local rgba = app.pixelColor.rgba
+local rgbaR = app.pixelColor.rgbaR
+local rgbaG = app.pixelColor.rgbaG
+local rgbaB = app.pixelColor.rgbaB
 local rgbaA = app.pixelColor.rgbaA
 
 local spr = app.open("artwork/study/study-master.aseprite")
@@ -158,15 +161,67 @@ baseImg2x:saveAs("public/art/study/mage/study.png")
 print(string.format("Exported study.png (%dx%d)", baseImg2x.width, baseImg2x.height))
 
 -- 2. 导出 99_hotspot_mask -> public/art/study/mage/hotspots.png (1×: 960×540 基准网格)
+--    并自动扫描六大主栏目的 960×540 包围盒，不再依赖任何手写多边形 JSON。
+local SECTION_SPECS = {
+  { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = true,  outline = "all",     color = { 58, 215, 255 } },
+  { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = true,  outline = "all",     color = { 89, 226, 138 } },
+  { id = "profile",  label = "About",        key = 3, priority = 6, labelBelow = false, outline = "all",     color = { 255, 210, 122 } },
+  { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = true,  outline = "largest", color = { 255, 154, 120 } },
+  { id = "quests",   label = "Side Quests",  key = 5, priority = 5, labelBelow = false, outline = "all",     color = { 214, 140, 255 } },
+  { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = true,  outline = "all",     color = { 255, 122, 168 } },
+}
+
+local exportedSections = {}
 local maskLayer = findLayer(spr.layers, "99_hotspot_mask")
 if maskLayer then
   local maskImg1x = getLayerFrameImage(maskLayer, 1)
   maskImg1x:saveAs("public/art/study/mage/hotspots.png")
   print(string.format("Exported hotspots.png (%dx%d)", maskImg1x.width, maskImg1x.height))
+
+  -- 为每个主栏目计算在 960×540 掩膜中的精确像素包围盒
+  local boundsByKey = {}
+  for _, sec in ipairs(SECTION_SPECS) do
+    boundsByKey[sec.key] = { minX = baseW, minY = baseH, maxX = -1, maxY = -1 }
+  end
+
+  for y = 0, baseH - 1 do
+    for x = 0, baseW - 1 do
+      local px = maskImg1x:getPixel(x, y)
+      local r, g, b = rgbaR(px), rgbaG(px), rgbaB(px)
+      for _, sec in ipairs(SECTION_SPECS) do
+        local c = sec.color
+        if r == c[1] and g == c[2] and b == c[3] then
+          local bd = boundsByKey[sec.key]
+          if x < bd.minX then bd.minX = x end
+          if x > bd.maxX then bd.maxX = x end
+          if y < bd.minY then bd.minY = y end
+          if y > bd.maxY then bd.maxY = y end
+          break
+        end
+      end
+    end
+  end
+
+  for _, sec in ipairs(SECTION_SPECS) do
+    local bd = boundsByKey[sec.key]
+    table.insert(exportedSections, {
+      id = sec.id,
+      label = sec.label,
+      key = sec.key,
+      color = sec.color,
+      x = bd.minX,
+      y = bd.minY,
+      width = math.max(1, bd.maxX - bd.minX + 1),
+      height = math.max(1, bd.maxY - bd.minY + 1),
+      priority = sec.priority,
+      labelBelow = sec.labelBelow,
+      outline = sec.outline,
+    })
+  end
 end
 
 -- 3. 定义场景零件清单与状态映射，并自动计算裁剪包围盒 + 导出 PNG
-local PROP_Specs = {
+local PROP_SPECS = {
   {
     id = "chalkboard-diagram",
     label = "Chalkboard Diagram",
@@ -261,7 +316,7 @@ local knownLayers = {
   ["00_room_base"] = true,
   ["99_hotspot_mask"] = true,
 }
-for _, p in ipairs(PROP_Specs) do
+for _, p in ipairs(PROP_SPECS) do
   for _, st in ipairs(p.states) do
     knownLayers[st.layer] = true
   end
@@ -275,7 +330,7 @@ local function discoverCustomPropLayers(layers)
     elseif not knownLayers[layer.name] and layer.name:sub(1, 5) == "prop_" then
       local rawId = layer.name:sub(6):gsub("_", "-")
       knownLayers[layer.name] = true
-      table.insert(PROP_Specs, {
+      table.insert(PROP_SPECS, {
         id = rawId,
         label = rawId,
         zIndex = 2,
@@ -292,7 +347,7 @@ discoverCustomPropLayers(spr.layers)
 
 local exportedProps = {}
 
-for _, prop in ipairs(PROP_Specs) do
+for _, prop in ipairs(PROP_SPECS) do
   local layerNames = {}
   for _, st in ipairs(prop.states) do
     table.insert(layerNames, st.layer)
@@ -348,17 +403,20 @@ local function toJson(val, indent)
   elseif t == "table" then
     local isArray = (#val > 0)
     if isArray then
+      -- 紧凑输出 RGB 颜色三元组 [r, g, b]
+      if #val == 3 and type(val[1]) == "number" then
+        return string.format("[%d, %d, %d]", val[1], val[2], val[3])
+      end
       local items = {}
       for i = 1, #val do
         table.insert(items, nextPad .. toJson(val[i], indent + 1))
       end
       return "[\n" .. table.concat(items, ",\n") .. "\n" .. pad .. "]"
     else
-      -- 按固定键序输出保证 git diff 干净稳定
       local keyOrder = {
         "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
-        "background", "hotspotMask", "props",
-        "id", "label", "x", "y", "width", "height", "zIndex",
+        "background", "hotspotMask", "sections", "props",
+        "id", "label", "key", "color", "x", "y", "width", "height", "zIndex",
         "interactive", "priority", "labelBelow", "outline",
         "action", "type", "targetProp", "fxSelector", "storageKey",
         "defaultState", "states", "src", "frames", "frameDurationMs", "fxActive", "caption",
@@ -394,12 +452,13 @@ local manifest = {
   exportHeight = baseH * EXPORT_SCALE,
   background = "study.png",
   hotspotMask = "hotspots.png",
+  sections = exportedSections,
   props = exportedProps,
 }
 
 local f = io.open("src/study-scene.json", "w")
 f:write(toJson(manifest, 0) .. "\n")
 f:close()
-print("Generated src/study-scene.json with " .. #exportedProps .. " modular props.")
+print("Generated src/study-scene.json (" .. #exportedSections .. " sections, " .. #exportedProps .. " modular props).")
 
 spr:close()

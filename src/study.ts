@@ -1,4 +1,3 @@
-import hotspotData from './study-hotspots.json';
 import sceneData from './study-scene.json';
 import {
   contoursToPath, decodeMask, lookupMask, maskFromAlpha, stampMask, traceLabel,
@@ -8,20 +7,21 @@ import {
 // 基准网格 960×540（与 study-master.aseprite 及 hotspots.png 一致），底图与零件导出为 2× (1920×1080)。
 const studyBase = { width: sceneData.baseWidth, height: sceneData.baseHeight };
 const studyExport = { width: sceneData.exportWidth, height: sceneData.exportHeight };
-const studyGrid = { width: 557, height: 313 };
 
-type Point = [number, number];
-type SectionHotspotId = 'profile' | 'notes' | 'news' | 'research' | 'quests' | 'door';
-type HotspotId = SectionHotspotId | string;
+type HotspotId = string;
 
-type HotspotDefinition = {
-  id: HotspotId;
+type SectionSpec = {
+  id: string;
   label: string;
   key: number;
+  color: [number, number, number];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   priority: number;
   labelBelow?: boolean;
   outline: 'all' | 'largest';
-  kind: 'section' | 'door' | 'prop';
 };
 
 type PropStateSpec = {
@@ -57,120 +57,87 @@ type PropSpec = {
   states: PropStateSpec[];
 };
 
-type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
+type HotspotItem = {
+  id: HotspotId;
+  label: string;
+  key: number;
+  priority: number;
+  labelBelow?: boolean;
+  outline: 'all' | 'largest';
+  kind: 'section' | 'door' | 'prop';
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+  fallbackPath: string;
+  prop?: PropSpec;
+};
 
-const sectionDefinitions: HotspotDefinition[] = [
-  { id: 'profile', label: 'About', key: 3, priority: 6, outline: 'all', kind: 'section' },
-  { id: 'notes', label: 'Notes', key: 4, priority: 4, labelBelow: true, outline: 'largest', kind: 'section' },
-  { id: 'news', label: 'News', key: 1, priority: 2, labelBelow: true, outline: 'all', kind: 'section' },
-  { id: 'research', label: 'Research', key: 2, priority: 3, labelBelow: true, outline: 'all', kind: 'section' },
-  { id: 'quests', label: 'Side Quests', key: 5, priority: 5, outline: 'all', kind: 'section' },
-  { id: 'door', label: 'Look outside', key: 6, priority: 1, labelBelow: true, outline: 'all', kind: 'door' },
-];
+function toRectPath(x: number, y: number, width: number, height: number): string {
+  return `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
+}
 
+const sceneSections = (sceneData.sections ?? []) as SectionSpec[];
 const sceneProps = (sceneData.props ?? []) as PropSpec[];
 const interactiveProps = sceneProps
   .filter((prop) => prop.interactive)
   .sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
 
-const propDefinitions: HotspotDefinition[] = interactiveProps.map((prop, index) => ({
+const sectionHotspots: HotspotItem[] = sceneSections.map((sec) => ({
+  id: sec.id,
+  label: sec.label,
+  key: sec.key,
+  priority: sec.priority,
+  labelBelow: sec.labelBelow,
+  outline: sec.outline,
+  kind: sec.id === 'door' ? 'door' : 'section',
+  xPercent: (sec.x / studyBase.width) * 100,
+  yPercent: (sec.y / studyBase.height) * 100,
+  widthPercent: (sec.width / studyBase.width) * 100,
+  heightPercent: (sec.height / studyBase.height) * 100,
+  fallbackPath: toRectPath(sec.x, sec.y, sec.width, sec.height),
+}));
+
+const propHotspots: HotspotItem[] = interactiveProps.map((prop, index) => ({
   id: prop.id,
   label: prop.label,
-  key: 7 + index,
+  key: sceneSections.length + 1 + index,
   priority: prop.priority ?? (10 + index),
   labelBelow: prop.labelBelow,
   outline: prop.outline ?? 'all',
   kind: 'prop',
+  xPercent: (prop.x / studyBase.width) * 100,
+  yPercent: (prop.y / studyBase.height) * 100,
+  widthPercent: (prop.width / studyBase.width) * 100,
+  heightPercent: (prop.height / studyBase.height) * 100,
+  fallbackPath: toRectPath(prop.x, prop.y, prop.width, prop.height),
+  prop,
 }));
 
-const allDefinitions: HotspotDefinition[] = [...sectionDefinitions, ...propDefinitions];
+const allHotspots: HotspotItem[] = [...sectionHotspots, ...propHotspots];
 
-const hotspotSource = hotspotData as Record<string, { color: number[]; polygons: number[][][] }>;
-const extraDebugColors: Rgb[] = [
+const propDebugColors: Rgb[] = [
   [255, 230, 105],
   [122, 255, 212],
   [255, 166, 77],
   [196, 255, 110],
   [140, 195, 255],
 ];
-const colors: Rgb[] = [
-  [0, 0, 0],
-  ...[1, 2, 3, 4, 5, 6].map((key) => hotspotSource[String(key)].color as Rgb),
-  ...propDefinitions.map((_, idx) => extraDebugColors[idx % extraDebugColors.length]),
-];
+
+const colors: Rgb[] = [[0, 0, 0]];
+for (const sec of sceneSections) {
+  colors[sec.key] = sec.color;
+}
+propHotspots.forEach((spot, index) => {
+  colors[spot.key] = propDebugColors[index % propDebugColors.length];
+});
 
 const labelToId = new Map<number, HotspotId>(
-  allDefinitions.map((definition) => [definition.key, definition.id]),
+  allHotspots.map((spot) => [spot.key, spot.id]),
 );
-const definitionsById = new Map<HotspotId, HotspotDefinition>(
-  allDefinitions.map((definition) => [definition.id, definition]),
+const hotspotsById = new Map<HotspotId, HotspotItem>(
+  allHotspots.map((spot) => [spot.id, spot]),
 );
-
-
-
-function boundsOf(polygons: Point[][]): Bounds {
-  const points = polygons.flat();
-  const xs = points.map(([x]) => x);
-  const ys = points.map(([, y]) => y);
-  return {
-    minX: Math.min(...xs),
-    minY: Math.min(...ys),
-    maxX: Math.max(...xs),
-    maxY: Math.max(...ys),
-  };
-}
-
-function toArtPath(polygons: Point[][]): string {
-  const scaleX = studyBase.width / studyGrid.width;
-  const scaleY = studyBase.height / studyGrid.height;
-  return polygons
-    .map((polygon) => `M ${polygon.map(([x, y]) => `${Math.round(x * scaleX)} ${Math.round(y * scaleY)}`).join(' L ')} Z`)
-    .join(' ');
-}
-
-function toRectPath(x: number, y: number, width: number, height: number): string {
-  return `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
-}
-
-function toClipPath(polygon: Point[], bounds: Bounds): string {
-  const width = Math.max(1e-6, bounds.maxX - bounds.minX);
-  const height = Math.max(1e-6, bounds.maxY - bounds.minY);
-  const points = polygon.map(([x, y]) => {
-    const px = ((x - bounds.minX) / width) * 100;
-    const py = ((y - bounds.minY) / height) * 100;
-    return `${px.toFixed(3)}% ${py.toFixed(3)}%`;
-  });
-  return `polygon(${points.join(', ')})`;
-}
-
-const studyHotspots = sectionDefinitions.map((definition) => {
-  const source = hotspotSource[String(definition.key)];
-  const polygons = source.polygons as Point[][];
-  const bounds = boundsOf(polygons);
-  return {
-    ...definition,
-    x: (bounds.minX / studyGrid.width) * 100,
-    y: (bounds.minY / studyGrid.height) * 100,
-    width: ((bounds.maxX - bounds.minX) / studyGrid.width) * 100,
-    height: ((bounds.maxY - bounds.minY) / studyGrid.height) * 100,
-    clipPath: toClipPath(polygons[0], bounds),
-    fallbackPath: toArtPath(polygons),
-  };
-});
-
-const propHotspots = interactiveProps.map((prop) => {
-  const definition = definitionsById.get(prop.id)!;
-  return {
-    ...definition,
-    prop,
-    x: (prop.x / studyBase.width) * 100,
-    y: (prop.y / studyBase.height) * 100,
-    width: (prop.width / studyBase.width) * 100,
-    height: (prop.height / studyBase.height) * 100,
-    clipPath: 'none',
-    fallbackPath: toRectPath(prop.x, prop.y, prop.width, prop.height),
-  };
-});
 
 
 
@@ -330,7 +297,6 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     setState(initialState, false);
   }
 
-  // 若某个零件带有 targetProp（如粉笔槽切换黑板公式），同步恢复目标零件的存储状态与标签提示
   function syncCycleTargetCaption(prop: PropSpec) {
     if (prop.action?.type !== 'cycle-target' || !prop.action.targetProp) return;
     const target = mountedProps.get(prop.action.targetProp);
@@ -360,7 +326,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   outlineMap.setAttribute('aria-hidden', 'true');
   const shapes = new Map<HotspotId, SVGPathElement>();
 
-  for (const spot of [...studyHotspots, ...propHotspots]) {
+  for (const spot of allHotspots) {
     const path = document.createElementNS(svgNs, 'path');
     path.setAttribute('class', `hotspot-shape hotspot-shape-${spot.id}`);
     path.setAttribute('data-hotspot', spot.id);
@@ -372,12 +338,12 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   art.append(outlineMap);
 
   // 创建 6 大栏目热点与场景内微交互零件按钮
-  for (const spot of [...studyHotspots, ...propHotspots]) {
+  for (const spot of allHotspots) {
     const wrap = document.createElement('div');
     wrap.className = `hotspot-wrap hotspot-${spot.id}${spot.labelBelow ? ' label-below' : ''}`;
     Object.assign(wrap.style, {
-      left: `${spot.x}%`, top: `${spot.y}%`,
-      width: `${spot.width}%`, height: `${spot.height}%`,
+      left: `${spot.xPercent}%`, top: `${spot.yPercent}%`,
+      width: `${spot.widthPercent}%`, height: `${spot.heightPercent}%`,
       zIndex: String(spot.priority + 3),
     });
 
@@ -387,9 +353,6 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     hotspot.id = spot.id === 'door' ? 'door' : `hotspot-${spot.id}`;
     hotspot.setAttribute('aria-label', spot.label);
     hotspot.setAttribute('data-hotspot', spot.id);
-    if (spot.clipPath !== 'none') {
-      hotspot.style.clipPath = spot.clipPath;
-    }
 
     if (hotspot instanceof HTMLAnchorElement) {
       hotspot.href = `#${spot.id}`;
@@ -424,8 +387,8 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
       syncActive();
     });
 
-    if (spot.kind === 'prop') {
-      const prop = (spot as typeof propHotspots[number]).prop;
+    if (spot.kind === 'prop' && spot.prop) {
+      const { prop } = spot;
       hotspot.addEventListener('click', (event) => {
         event.preventDefault();
         const mounted = mountedProps.get(prop.id);
@@ -454,7 +417,6 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     captions.set(spot.id, caption);
   }
 
-  // 初始化微交互按钮的动态标签文本
   for (const prop of interactiveProps) {
     const mounted = mountedProps.get(prop.id);
     if (mounted && prop.action?.type === 'toggle-state') {
@@ -517,7 +479,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
 
   // 掩膜决定鼠标命中区域和金色轮廓：
   // 1) 六大栏目从 960×540 的 hotspots.png 解码并提取完整外轮廓；
-  // 2) 独立拆出的可交互零件直接读取自身 PNG 的 Alpha > 16 通道自动合成命中区与 Marching Squares 金色描边。
+  // 2) 独立拆出的可交互零件直接读取自身 PNG 的 Alpha ≥ 16 通道自动合成命中区与 Marching Squares 金色描边。
   const contourCache = new Map<HotspotId, Contour[]>();
   const isolatedPropMasks = new Map<HotspotId, MaskData>();
   let baseMask: MaskData | undefined;
@@ -526,13 +488,13 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   function ensureContours(id: HotspotId): Contour[] {
     const cached = contourCache.get(id);
     if (cached) return cached;
-    const definition = definitionsById.get(id);
-    if (!definition) return [];
-    const sourceMask = definition.kind === 'prop' ? isolatedPropMasks.get(id) : baseMask;
+    const spot = hotspotsById.get(id);
+    if (!spot) return [];
+    const sourceMask = spot.kind === 'prop' ? isolatedPropMasks.get(id) : baseMask;
     if (!sourceMask) return [];
-    const contours = traceLabel(sourceMask, definition.key);
+    const contours = traceLabel(sourceMask, spot.key);
     contourCache.set(id, contours);
-    const outline = definition.outline === 'largest' ? contours.slice(0, 1) : contours;
+    const outline = spot.outline === 'largest' ? contours.slice(0, 1) : contours;
     if (outline.length > 0) {
       shapes.get(id)?.setAttribute('d', contoursToPath(outline));
     }
@@ -545,7 +507,6 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     if (!rect.width || !rect.height) return undefined;
     const x = Math.floor((clientX - rect.left) / rect.width * studyBase.width);
     const y = Math.floor((clientY - rect.top) / rect.height * studyBase.height);
-    // 容差按 960×540 基准像素换算，手机上不会因为整图缩小而变得难点。
     const radius = Math.min(14, Math.max(3, Math.round(5 * studyBase.width / rect.width)));
     return labelToId.get(lookupMask(hitMask, x, y, radius));
   }
@@ -557,6 +518,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
 
     for (const spot of propHotspots) {
       const { prop } = spot;
+      if (!prop) continue;
       const defaultSpec = prop.states.find((s) => s.id === prop.defaultState) ?? prop.states[0];
       if (!defaultSpec) continue;
       try {
@@ -570,7 +532,6 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
         offscreen.height = prop.height;
         ctx.clearRect(0, 0, prop.width, prop.height);
         ctx.imageSmoothingEnabled = false;
-        // 若是多帧横向精灵条带，只截取第 1 帧用于 Alpha 命中与轮廓提取
         const frameWidth = Math.floor(propImg.naturalWidth / Math.max(1, defaultSpec.frames));
         ctx.drawImage(
           propImg,
@@ -613,12 +574,10 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
       bounds: decodedBase.bounds.map((b) => (b ? { ...b } : undefined)),
     };
 
-    // 将可交互零件的 Alpha 通道自动合成到全局命中掩膜上，并生成各自的 Marching Squares 金色轮廓
     await stampInteractiveProps(hitMask);
 
     art.classList.add('has-hit-layer');
 
-    // 鼠标/触屏命中层压在插图上；键盘仍然走原来的链接和按钮。
     const overlay = document.createElement('div');
     overlay.className = 'study-hit-layer';
     overlay.setAttribute('aria-hidden', 'true');
@@ -673,11 +632,10 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     });
     art.append(overlay);
 
-    // 空闲时逐个预追踪轮廓，避免第一次悬停时卡顿。
     let warmIndex = 0;
     const warm = () => {
-      if (warmIndex >= allDefinitions.length) return;
-      ensureContours(allDefinitions[warmIndex].id);
+      if (warmIndex >= allHotspots.length) return;
+      ensureContours(allHotspots[warmIndex].id);
       warmIndex += 1;
       idle(warm);
     };
@@ -706,8 +664,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
       art.classList.add('debug-hotspots');
     }
   }).catch((error: unknown) => {
-    // 掩膜不可用时保留旧多边形的悬停和点击，页面仍然可用。
-    console.warn('Hotspot mask unavailable; using polygon fallback.', error);
+    console.warn('Hotspot mask unavailable; using bounding-box fallback.', error);
   });
 }
 
@@ -715,10 +672,10 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
 
 // 热点在 960×540 基准图中的最外围边界固定，窗口缩放时只需重新计算画布的位置和比例。
 const hotspotBounds = {
-  left: Math.min(...studyHotspots.map((spot) => spot.x)) / 100 * studyBase.width,
-  right: Math.max(...studyHotspots.map((spot) => spot.x + spot.width)) / 100 * studyBase.width,
-  top: Math.min(...studyHotspots.map((spot) => spot.y)) / 100 * studyBase.height,
-  bottom: Math.max(...studyHotspots.map((spot) => spot.y + spot.height)) / 100 * studyBase.height,
+  left: Math.min(...sectionHotspots.map((spot) => spot.xPercent)) / 100 * studyBase.width,
+  right: Math.max(...sectionHotspots.map((spot) => spot.xPercent + spot.widthPercent)) / 100 * studyBase.width,
+  top: Math.min(...sectionHotspots.map((spot) => spot.yPercent)) / 100 * studyBase.height,
+  bottom: Math.max(...sectionHotspots.map((spot) => spot.yPercent + spot.heightPercent)) / 100 * studyBase.height,
 };
 const desktopInsets = { side: 0, top: 0, bottom: 0 };
 
@@ -727,7 +684,6 @@ function fitStudyToScene(scene: HTMLElement, art: HTMLElement) {
   const height = scene.clientHeight;
   if (!width || !height) return;
 
-  // 手机上完整显示原图。桌面铺满画面，标题、导航和页脚叠在插图上。
   let scale = Math.min(width / studyBase.width, height / studyBase.height);
   const desktop = !window.matchMedia('(max-width: 760px)').matches;
   if (desktop) {

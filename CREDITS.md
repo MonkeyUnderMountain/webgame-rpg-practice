@@ -6,9 +6,9 @@ The site code is released under the MIT License. Copyright (c) 2026 Tianle Yang.
 
 ## Homepage artwork
 
-The live background is `public/art/study/mage/study.png`, a 96-color pixel-art treatment of the project's mage-study concept (1672×941). Concept images, label maps, and working files are in `artwork/homepage-concepts/`.
+The study scene is authored and maintained in [`artwork/study/study-master.aseprite`](artwork/study/study-master.aseprite) on a **960×540** base grid and exported at **2× (1920×1080)** to `public/art/study/mage/study.png` and `public/art/study/mage/props/`.
 
-The artwork was generated with AI image tools and edited for this site. It is part of this project and is not covered by the MIT software license.
+The artwork combines AI-generated concept foundations with hand-edited pixel-art layers, animations, and mathematical chalkboard diagrams in Aseprite. It is part of this project and is not covered by the MIT software license.
 
 ## Music
 

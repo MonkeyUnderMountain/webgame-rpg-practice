@@ -31,7 +31,7 @@ local function clamp(v, lo, hi)
 end
 
 -- 1. 读取原始概念母图并缩放到 960×540 (Nearest-Neighbor)，保证重复 --init 幂等
-local srcSpr = app.open("artwork/homepage-concepts/shortlist/09s-pixel-vivid-b-96.png")
+local srcSpr = app.open("artwork/study/source-room.png")
 app.activeSprite = srcSpr
 app.command.ChangePixelFormat{ format="rgb" }
 srcSpr:resize(BASE_W, BASE_H)
@@ -39,7 +39,7 @@ local rawImg = Image(srcSpr.cels[1].image)
 srcSpr:close()
 
 -- 读取原始热点掩膜并缩放到 960×540
-local maskSpr = app.open("public/art/study/mage/hotspots.png")
+local maskSpr = app.open("artwork/study/source-hotspots.png")
 app.activeSprite = maskSpr
 app.command.ChangePixelFormat{ format="rgb" }
 maskSpr:resize(BASE_W, BASE_H)

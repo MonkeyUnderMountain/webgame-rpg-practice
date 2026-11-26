@@ -6,6 +6,86 @@
   "exportHeight": 1080,
   "background": "study.png",
   "hotspotMask": "hotspots.png",
+  "sections": [
+    {
+      "id": "news",
+      "label": "News",
+      "key": 1,
+      "color": [58, 215, 255],
+      "x": 4,
+      "y": 71,
+      "width": 119,
+      "height": 180,
+      "priority": 2,
+      "labelBelow": true,
+      "outline": "all"
+    },
+    {
+      "id": "research",
+      "label": "Research",
+      "key": 2,
+      "color": [89, 226, 138],
+      "x": 200,
+      "y": 45,
+      "width": 207,
+      "height": 209,
+      "priority": 3,
+      "labelBelow": true,
+      "outline": "all"
+    },
+    {
+      "id": "profile",
+      "label": "About",
+      "key": 3,
+      "color": [255, 210, 122],
+      "x": 35,
+      "y": 271,
+      "width": 505,
+      "height": 269,
+      "priority": 6,
+      "labelBelow": false,
+      "outline": "all"
+    },
+    {
+      "id": "notes",
+      "label": "Notes",
+      "key": 4,
+      "color": [255, 154, 120],
+      "x": 431,
+      "y": 13,
+      "width": 183,
+      "height": 369,
+      "priority": 4,
+      "labelBelow": true,
+      "outline": "largest"
+    },
+    {
+      "id": "quests",
+      "label": "Side Quests",
+      "key": 5,
+      "color": [214, 140, 255],
+      "x": 554,
+      "y": 290,
+      "width": 222,
+      "height": 140,
+      "priority": 5,
+      "labelBelow": false,
+      "outline": "all"
+    },
+    {
+      "id": "door",
+      "label": "Look outside",
+      "key": 6,
+      "color": [255, 122, 168],
+      "x": 774,
+      "y": 76,
+      "width": 176,
+      "height": 356,
+      "priority": 1,
+      "labelBelow": true,
+      "outline": "all"
+    }
+  ],
   "props": [
     {
       "id": "chalkboard-diagram",
