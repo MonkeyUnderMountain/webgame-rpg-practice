@@ -43,6 +43,11 @@ a:hover { color: var(--gold); }
 .study-scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#080b1594, transparent 28%, transparent 82%, #080b1573); }
 .study-art { position: absolute; isolation: isolate; }
 .study-image { display: block; width: 100%; height: 100%; user-select: none; image-rendering: pixelated; }
+.side-preview { --study-ratio: 16 / 9; }
+.side-preview .study-art { inset: 0; }
+.side-preview img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.room-picker { display: inline-flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px; border-radius: 4px; background: #151820ed; color: var(--ink); }
+.room-picker select { font: inherit; padding: 4px; }
 
 /* 模块化像素零件与帧动画层（960×540 基准网格，2× 导出） */
 .study-props { position: absolute; inset: 0; z-index: 1; pointer-events: none; }

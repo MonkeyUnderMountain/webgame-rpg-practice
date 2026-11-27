@@ -9,6 +9,14 @@ import './style.css';
 import { mountMusic } from './music';
 import { mountReadingPanel } from './readingPanel';
 import { mountStudy } from './study';
+import sideViewReference from '../artwork/study/side-view/reference.jpg';
+import stone from '../artwork/study/side-view/variants/study-side-view-stone-sanctum.jpg';
+import stoneWorkstation from '../artwork/study/side-view/variants/study-side-view-stone-workstation.png';
+import sunlitWorkstation from '../artwork/study/side-view/variants/study-side-view-stone-workstation-sunlit.jpg';
+import daylight from '../artwork/study/side-view/variants/study-side-view-detailed-daylight.jpg';
+import moon from '../artwork/study/side-view/variants/study-side-view-moon.jpg';
+import herbal from '../artwork/study/side-view/variants/study-side-view-herbal.jpg';
+import ember from '../artwork/study/side-view/variants/study-side-view-ember.jpg';
 
 
 
@@ -50,8 +58,51 @@ function mountDoorDialog(dialog: HTMLDialogElement) {
 
 
 
-// 先创建插图上的链接和房门，再绑定弹窗与网址锚点。
-mountStudy(element('study-scene'), element('study-art'));
+function mountSidePreview(scene: HTMLElement, art: HTMLElement) {
+  const styles = [
+    { id: 'stone-wide-board', label: 'Reference · sunlit study', src: sideViewReference },
+    { id: 'stone', label: "Mage's stone study", src: stone },
+    { id: 'stone-workstation', label: 'Stone workstation · dusk', src: stoneWorkstation },
+    { id: 'stone-sunlit', label: 'Stone workstation · sunny day', src: sunlitWorkstation },
+    { id: 'daylight', label: 'Daylight study', src: daylight },
+    { id: 'moon', label: 'Moonlit observatory', src: moon },
+    { id: 'herbal', label: 'Rainy herbarium', src: herbal },
+    { id: 'ember', label: 'Ember runes', src: ember },
+  ];
+  const select = element<HTMLSelectElement>('room-style');
+  const notice = element('study-art-error');
+  const image = new Image();
+  image.addEventListener('error', () => { notice.hidden = false; });
+  scene.classList.add('side-preview');
+  scene.setAttribute('aria-label', 'Side-view study preview');
+  art.append(image);
+
+  for (const style of styles) select.add(new Option(style.label, style.id));
+  function showStyle(id: string | null) {
+    const style = styles.find((item) => item.id === id) ?? styles[0];
+    notice.hidden = true;
+    select.value = style.id;
+    image.alt = `${style.label}: side view of the study with a chalkboard, desk and valley window`;
+    image.src = style.src;
+  }
+  showStyle(new URLSearchParams(location.search).get('style'));
+  select.addEventListener('change', () => {
+    showStyle(select.value);
+    const url = new URL(location.href);
+    url.searchParams.set('style', select.value);
+    history.replaceState(null, '', url);
+  });
+  element('room-picker').hidden = false;
+}
+
+// 侧视预览只展示插画；原书房仍使用零件、热点和动画。
+const scene = element('study-scene');
+const art = element('study-art');
+if (new URLSearchParams(location.search).get('room') === 'side') {
+  mountSidePreview(scene, art);
+} else {
+  mountStudy(scene, art);
+}
 mountMusic(element<HTMLAudioElement>('study-music'), element<HTMLButtonElement>('music-toggle'));
 mountReadingPanel(element<HTMLDialogElement>('section-dialog'));
 mountDoorDialog(element<HTMLDialogElement>('door-dialog'));

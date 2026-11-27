@@ -18,9 +18,13 @@ Open the local address Vite prints. In the study:
 - Press **Esc** or click outside a scroll to close it.
 - Append `?debug=hotspots` to the URL to inspect the 960×540 pixel hit mask and Marching Squares golden contours.
 
+## Side-view layout reference
+
+Open `/?room=side` on the local site to see the approved [1280×720 reference illustration](artwork/study/side-view/reference.jpg). Use this image for the position, scale and lighting of each new prop: the arched door is on the left, the wide chalkboard has clear floor space in front, and the window, modern desk and bookcase are grouped on the right. The **Room style** picker shows the other seven studies for comparison.
+
 ## Edit pixel art & modular props
 
-All room layers, replaceable props, 4-frame animations, and the base hotspot mask live in a single **`960×540`** Aseprite master project: [`artwork/study/study-master.aseprite`](artwork/study/study-master.aseprite).
+The interactive homepage at `/` uses a separate **960×540** Aseprite master: [`artwork/study/study-master.aseprite`](artwork/study/study-master.aseprite). It contains the room layers, replaceable props, 4-frame animations and base hotspot mask.
 
 After editing layers in Aseprite, run:
 
@@ -42,8 +46,10 @@ This type-checks the TypeScript source and builds the root-domain static site in
 
 | Path | Contents |
 | --- | --- |
-| `artwork/study/` | `study-master.aseprite` (960×540 master project) and pristine source backups |
-| `scripts/` | Aseprite CLI batch scripts (`export-study.mjs`, `export-study.lua`, `init-study-master.lua`) |
+| `artwork/study/` | Interactive Aseprite master and its source room and hotspot images |
+| [`artwork/study/side-view/`](artwork/study/side-view/) | `reference.jpg` is the chosen layout; `variants/` holds the seven alternative previews |
+| [`artwork/study/archive/`](artwork/study/archive/) | Early concepts, pixel tests, shell staging, side-view studies and wall-lamp trials, grouped by topic. The [hand-traced 320×180 project](artwork/study/archive/perspective-tracing/study-v3-trace-320.aseprite) is kept with its guides and previews. |
+| `scripts/` | Aseprite export and initialization scripts, and the local ComfyUI pixel-art experiment |
 | `index.html`, `src/` | Layered scene runtime, Alpha-channel contour tracing, parchment scroll panels, and music control |
 | `content/home/` | Editable HTML for the five homepage sections (`profile`, `notes`, `news`, `research`, `quests`) |
 | `public/` | Exported 2× runtime artwork (`study.png`, `props/*.png`), `hotspots.png`, `beyond.svg`, and audio |
