@@ -1,4 +1,6 @@
 {
+  "roomId": "mage",
+  "artBase": "art/study/mage/",
   "baseWidth": 960,
   "baseHeight": 540,
   "exportScale": 2,

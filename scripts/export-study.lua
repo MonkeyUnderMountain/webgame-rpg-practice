@@ -1,15 +1,328 @@
 -- scripts/export-study.lua
--- 从 artwork/study/study-master.aseprite (960×540) 自动裁剪并导出 2× (1920×1080) 资源，
--- 同时将六大主栏目与所有模块化零件在 960×540 基准网格下的精确坐标写入 src/study-scene.json。
+-- 从指定房间的 Aseprite 主工程按整数倍导出资源，并将原画布坐标写入对应 JSON 清单。
+-- 默认房间为 mage；可通过 --script-param room=side 或环境变量 STUDY_ROOM=side 切换。
 
-local EXPORT_SCALE = 2
 local rgba = app.pixelColor.rgba
 local rgbaR = app.pixelColor.rgbaR
 local rgbaG = app.pixelColor.rgbaG
 local rgbaB = app.pixelColor.rgbaB
 local rgbaA = app.pixelColor.rgbaA
 
-local spr = app.open("artwork/study/study-master.aseprite")
+local roomId = (app.params and app.params.room) or os.getenv("STUDY_ROOM") or "mage"
+if roomId == "" then roomId = "mage" end
+
+local SECTION_SPECS = {
+  { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = true,  outline = "all",     color = { 58, 215, 255 } },
+  { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = true,  outline = "all",     color = { 89, 226, 138 } },
+  { id = "profile",  label = "About",        key = 3, priority = 6, labelBelow = false, outline = "all",     color = { 255, 210, 122 } },
+  { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = true,  outline = "largest", color = { 255, 154, 120 } },
+  { id = "quests",   label = "Side Quests",  key = 5, priority = 5, labelBelow = false, outline = "all",     color = { 214, 140, 255 } },
+  { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = true,  outline = "all",     color = { 255, 122, 168 } },
+}
+
+local ROOM_CONFIGS = {
+  mage = {
+    exportScale = 2,
+    masterPath = "artwork/study/study-master.aseprite",
+    outDir = "public/art/study/mage/",
+    artBase = "art/study/mage/",
+    manifestPath = "src/study-scene.json",
+    props = {
+      {
+        id = "chalkboard-diagram",
+        label = "Chalkboard Diagram",
+        zIndex = 2,
+        interactive = false,
+        defaultState = "diagram_1",
+        states = {
+          { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png", caption = "I · Projective Geometry" },
+          { id = "diagram_2", layer = "prop_chalkboard_d2", file = "chalkboard-d2.png", caption = "II · Snake Lemma & Pullback" },
+          { id = "diagram_3", layer = "prop_chalkboard_d3", file = "chalkboard-d3.png", caption = "III · Torus & Trefoil Knot" },
+        },
+      },
+      {
+        id = "chalk-tray",
+        label = "Chalk · Redraw Board",
+        zIndex = 4,
+        interactive = true,
+        priority = 12,
+        labelBelow = true,
+        outline = "all",
+        action = {
+          type = "cycle-target",
+          targetProp = "chalkboard-diagram",
+          storageKey = "study:chalkboard-diagram",
+        },
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_chalk_tray", file = "chalk-tray.png" },
+        },
+      },
+      {
+        id = "candle-column",
+        label = "Pillar Candle",
+        zIndex = 3,
+        interactive = true,
+        priority = 13,
+        labelBelow = true,
+        outline = "all",
+        action = {
+          type = "toggle-state",
+          fxSelector = ".fx-candle-column",
+          storageKey = "study:candle-column",
+        },
+        defaultState = "lit",
+        states = {
+          { id = "lit",   layer = "prop_candle_column_lit",   file = "candle-column-lit.png",   fxActive = true },
+          { id = "unlit", layer = "prop_candle_column_unlit", file = "candle-column-unlit.png", fxActive = false },
+        },
+      },
+      {
+        id = "candle-desk",
+        label = "Desk Candle",
+        zIndex = 3,
+        interactive = true,
+        priority = 14,
+        labelBelow = false,
+        outline = "all",
+        action = {
+          type = "toggle-state",
+          fxSelector = ".fx-candle-desk",
+          storageKey = "study:candle-desk",
+        },
+        defaultState = "lit",
+        states = {
+          { id = "lit",   layer = "prop_candle_desk_lit",   file = "candle-desk-lit.png",   fxActive = true },
+          { id = "unlit", layer = "prop_candle_desk_unlit", file = "candle-desk-unlit.png", fxActive = false },
+        },
+      },
+      {
+        id = "candle-bench",
+        label = "Window Candle",
+        zIndex = 3,
+        interactive = true,
+        priority = 15,
+        labelBelow = false,
+        outline = "all",
+        action = {
+          type = "toggle-state",
+          fxSelector = ".fx-candle-bench",
+          storageKey = "study:candle-bench",
+        },
+        defaultState = "lit",
+        states = {
+          { id = "lit",   layer = "prop_candle_bench_lit",   file = "candle-bench-lit.png",   fxActive = true },
+          { id = "unlit", layer = "prop_candle_bench_unlit", file = "candle-bench-unlit.png", fxActive = false },
+        },
+      },
+    },
+  },
+  side = {
+    exportScale = 3,
+    masterPath = "artwork/study/side-view/study-side-master.aseprite",
+    outDir = "public/art/study/side/",
+    artBase = "art/study/side/",
+    manifestPath = "src/study-side-scene.json",
+    props = {
+      {
+        id = "floor-shade",
+        label = "Floor Shade",
+        zIndex = 0,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_floor_shade", file = "floor-shade.png" },
+        },
+      },
+      {
+        id = "wall-lamp-glow",
+        label = "Lantern Glow",
+        zIndex = 0,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_wall_lamp_glow", file = "wall-lamp-glow.png" },
+        },
+      },
+      {
+        id = "window-light",
+        label = "Window Light",
+        zIndex = 0,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_window_light", file = "window-light.png" },
+        },
+      },
+      {
+        id = "window-view",
+        label = "Window View",
+        zIndex = 0,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_window_view", file = "window-view.png" },
+        },
+      },
+      {
+        id = "window-frame",
+        label = "Arched Window",
+        zIndex = 1,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_window_frame", file = "window-frame.png" },
+        },
+      },
+      {
+        id = "door",
+        label = "Door",
+        zIndex = 2,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_door", file = "door.png" },
+        },
+      },
+      {
+        id = "chalkboard-frame",
+        label = "Chalkboard Frame",
+        zIndex = 2,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_chalkboard_frame", file = "chalkboard-frame.png" },
+        },
+      },
+      {
+        id = "desk",
+        label = "Desk",
+        zIndex = 2,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_desk", file = "desk.png" },
+        },
+      },
+      {
+        id = "computer",
+        label = "Computer",
+        zIndex = 3,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_computer", file = "computer.png" },
+        },
+      },
+      {
+        id = "book",
+        label = "Open Book",
+        zIndex = 3,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_book", file = "book.png" },
+        },
+      },
+      {
+        id = "desk-chair",
+        label = "Desk Chair",
+        zIndex = 4,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_desk_chair", file = "desk-chair.png" },
+        },
+      },
+      {
+        id = "bookcase",
+        label = "Bookcase",
+        zIndex = 2,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_bookcase", file = "bookcase.png" },
+        },
+      },
+      {
+        id = "chalkboard-diagram",
+        label = "Chalkboard Diagram",
+        zIndex = 3,
+        interactive = false,
+        defaultState = "diagram_1",
+        states = {
+          { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png", caption = "I · Thales' Theorem" },
+          { id = "diagram_2", layer = "prop_chalkboard_d2", file = "chalkboard-d2.png", caption = "II · Commutative Diagram", optional = true },
+          { id = "diagram_3", layer = "prop_chalkboard_d3", file = "chalkboard-d3.png", caption = "III · Dynamics Orbit", optional = true },
+        },
+      },
+      {
+        id = "chalk-tray",
+        label = "Chalk · Redraw Board",
+        zIndex = 4,
+        interactive = true,
+        priority = 12,
+        labelBelow = true,
+        outline = "all",
+        action = {
+          type = "cycle-target",
+          targetProp = "chalkboard-diagram",
+          storageKey = "study:side:chalkboard-diagram",
+        },
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_chalk_tray", file = "chalk-tray.png" },
+        },
+      },
+      {
+        id = "wall-lamp",
+        label = "Wall Lantern",
+        zIndex = 3,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_wall_lamp", file = "wall-lamp.png", durationMs = 240 },
+        },
+      },
+      {
+        id = "candle-desk",
+        label = "Desk Candle",
+        zIndex = 3,
+        interactive = true,
+        priority = 14,
+        labelBelow = false,
+        outline = "all",
+        action = {
+          type = "toggle-state",
+          fxSelector = ".fx-candle-desk",
+          storageKey = "study:side:candle-desk",
+        },
+        defaultState = "lit",
+        states = {
+          { id = "lit",   layer = "prop_candle_desk_lit",   file = "candle-desk-lit.png",   fxActive = true },
+          { id = "unlit", layer = "prop_candle_desk_unlit", file = "candle-desk-unlit.png", fxActive = false },
+        },
+      },
+      {
+        id = "monitor-pulse",
+        label = "Monitor Pulse",
+        zIndex = 4,
+        interactive = false,
+        defaultState = "default",
+        states = {
+          { id = "default", layer = "prop_monitor_pulse", file = "monitor-pulse.png", durationMs = 900 },
+        },
+      },
+    },
+  },
+}
+
+local room = ROOM_CONFIGS[roomId]
+if not room then
+  error("Unknown room in export-study.lua: " .. tostring(roomId))
+end
+
+local spr = app.open(room.masterPath)
 app.activeSprite = spr
 app.command.ChangePixelFormat{ format="rgb" }
 
@@ -121,15 +434,27 @@ end
 local function exportTrimmedLayer(layerName, bounds, outPath, scale)
   local layer = findLayer(spr.layers, layerName)
   if not layer then
-    error("Missing layer in study-master.aseprite: " .. layerName)
+    error("Missing layer in " .. room.masterPath .. ": " .. layerName)
   end
 
   local frameImgs = {}
+  local celCount = #layer.cels
   local isAnimated = false
-  for f = 1, numFrames do
-    frameImgs[f] = getLayerFrameImage(layer, f)
-    if f > 1 and not regionsEqual(frameImgs[1], frameImgs[f], bounds) then
-      isAnimated = true
+
+  if celCount <= 1 then
+    -- 若图层仅有一个 cel（如 continuous 静态层或仅画在第 1 帧的新零件），按 1 帧静态图导出，避免闪烁消失
+    local singleCel = layer.cels[1]
+    if singleCel then
+      frameImgs[1] = getLayerFrameImage(layer, singleCel.frameNumber)
+    else
+      frameImgs[1] = getLayerFrameImage(layer, 1)
+    end
+  else
+    for f = 1, numFrames do
+      frameImgs[f] = getLayerFrameImage(layer, f)
+      if f > 1 and not regionsEqual(frameImgs[1], frameImgs[f], bounds) then
+        isAnimated = true
+      end
     end
   end
 
@@ -153,32 +478,22 @@ local function exportTrimmedLayer(layerName, bounds, outPath, scale)
   return exportFrames
 end
 
--- 1. 导出 00_room_base -> public/art/study/mage/study.png (2×: 1920×1080)
+-- 1. 导出 00_room_base -> <outDir>study.png (1920×1080)
 local baseLayer = findLayer(spr.layers, "00_room_base")
 local baseImg1x = getLayerFrameImage(baseLayer, 1)
-local baseImg2x = scaleImageNearest(baseImg1x, EXPORT_SCALE)
-baseImg2x:saveAs("public/art/study/mage/study.png")
-print(string.format("Exported study.png (%dx%d)", baseImg2x.width, baseImg2x.height))
+local background = scaleImageNearest(baseImg1x, room.exportScale)
+background:saveAs(room.outDir .. "study.png")
+print(string.format("[%s] Exported study.png (%dx%d)", roomId, background.width, background.height))
 
--- 2. 导出 99_hotspot_mask -> public/art/study/mage/hotspots.png (1×: 960×540 基准网格)
---    并自动扫描六大主栏目的 960×540 包围盒，不再依赖任何手写多边形 JSON。
-local SECTION_SPECS = {
-  { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = true,  outline = "all",     color = { 58, 215, 255 } },
-  { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = true,  outline = "all",     color = { 89, 226, 138 } },
-  { id = "profile",  label = "About",        key = 3, priority = 6, labelBelow = false, outline = "all",     color = { 255, 210, 122 } },
-  { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = true,  outline = "largest", color = { 255, 154, 120 } },
-  { id = "quests",   label = "Side Quests",  key = 5, priority = 5, labelBelow = false, outline = "all",     color = { 214, 140, 255 } },
-  { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = true,  outline = "all",     color = { 255, 122, 168 } },
-}
-
+-- 2. 导出 99_hotspot_mask -> <outDir>hotspots.png (1×)
+--    只写入实际在掩膜层中有像素的栏目，尚未分配对象的栏目不会产生虚假坐标。
 local exportedSections = {}
 local maskLayer = findLayer(spr.layers, "99_hotspot_mask")
-if maskLayer then
-  local maskImg1x = getLayerFrameImage(maskLayer, 1)
-  maskImg1x:saveAs("public/art/study/mage/hotspots.png")
-  print(string.format("Exported hotspots.png (%dx%d)", maskImg1x.width, maskImg1x.height))
+local maskImg1x = getLayerFrameImage(maskLayer, 1)
+maskImg1x:saveAs(room.outDir .. "hotspots.png")
+print(string.format("[%s] Exported hotspots.png (%dx%d)", roomId, maskImg1x.width, maskImg1x.height))
 
-  -- 为每个主栏目计算在 960×540 掩膜中的精确像素包围盒
+if maskLayer then
   local boundsByKey = {}
   for _, sec in ipairs(SECTION_SPECS) do
     boundsByKey[sec.key] = { minX = baseW, minY = baseH, maxX = -1, maxY = -1 }
@@ -187,16 +502,18 @@ if maskLayer then
   for y = 0, baseH - 1 do
     for x = 0, baseW - 1 do
       local px = maskImg1x:getPixel(x, y)
-      local r, g, b = rgbaR(px), rgbaG(px), rgbaB(px)
-      for _, sec in ipairs(SECTION_SPECS) do
-        local c = sec.color
-        if r == c[1] and g == c[2] and b == c[3] then
-          local bd = boundsByKey[sec.key]
-          if x < bd.minX then bd.minX = x end
-          if x > bd.maxX then bd.maxX = x end
-          if y < bd.minY then bd.minY = y end
-          if y > bd.maxY then bd.maxY = y end
-          break
+      if rgbaA(px) > 0 then
+        local r, g, b = rgbaR(px), rgbaG(px), rgbaB(px)
+        for _, sec in ipairs(SECTION_SPECS) do
+          local c = sec.color
+          if r == c[1] and g == c[2] and b == c[3] then
+            local bd = boundsByKey[sec.key]
+            if x < bd.minX then bd.minX = x end
+            if x > bd.maxX then bd.maxX = x end
+            if y < bd.minY then bd.minY = y end
+            if y > bd.maxY then bd.maxY = y end
+            break
+          end
         end
       end
     end
@@ -204,114 +521,26 @@ if maskLayer then
 
   for _, sec in ipairs(SECTION_SPECS) do
     local bd = boundsByKey[sec.key]
-    table.insert(exportedSections, {
-      id = sec.id,
-      label = sec.label,
-      key = sec.key,
-      color = sec.color,
-      x = bd.minX,
-      y = bd.minY,
-      width = math.max(1, bd.maxX - bd.minX + 1),
-      height = math.max(1, bd.maxY - bd.minY + 1),
-      priority = sec.priority,
-      labelBelow = sec.labelBelow,
-      outline = sec.outline,
-    })
+    if bd.maxX >= bd.minX and bd.maxY >= bd.minY then
+      table.insert(exportedSections, {
+        id = sec.id,
+        label = sec.label,
+        key = sec.key,
+        color = sec.color,
+        x = bd.minX,
+        y = bd.minY,
+        width = bd.maxX - bd.minX + 1,
+        height = bd.maxY - bd.minY + 1,
+        priority = sec.priority,
+        labelBelow = sec.labelBelow,
+        outline = sec.outline,
+      })
+    end
   end
 end
 
--- 3. 定义场景零件清单与状态映射，并自动计算裁剪包围盒 + 导出 PNG
-local PROP_SPECS = {
-  {
-    id = "chalkboard-diagram",
-    label = "Chalkboard Diagram",
-    zIndex = 2,
-    interactive = false,
-    defaultState = "diagram_1",
-    states = {
-      { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png", caption = "I · Projective Geometry" },
-      { id = "diagram_2", layer = "prop_chalkboard_d2", file = "chalkboard-d2.png", caption = "II · Snake Lemma & Pullback" },
-      { id = "diagram_3", layer = "prop_chalkboard_d3", file = "chalkboard-d3.png", caption = "III · Torus & Trefoil Knot" },
-    },
-  },
-  {
-    id = "chalk-tray",
-    label = "Chalk · Redraw Board",
-    zIndex = 4,
-    interactive = true,
-    priority = 12,
-    labelBelow = true,
-    outline = "all",
-    action = {
-      type = "cycle-target",
-      targetProp = "chalkboard-diagram",
-      storageKey = "study:chalkboard-diagram",
-    },
-    defaultState = "default",
-    states = {
-      { id = "default", layer = "prop_chalk_tray", file = "chalk-tray.png" },
-    },
-  },
-  {
-    id = "candle-column",
-    label = "Pillar Candle",
-    zIndex = 3,
-    interactive = true,
-    priority = 13,
-    labelBelow = true,
-    outline = "all",
-    action = {
-      type = "toggle-state",
-      fxSelector = ".fx-candle-column",
-      storageKey = "study:candle-column",
-    },
-    defaultState = "lit",
-    states = {
-      { id = "lit",   layer = "prop_candle_column_lit",   file = "candle-column-lit.png",   fxActive = true },
-      { id = "unlit", layer = "prop_candle_column_unlit", file = "candle-column-unlit.png", fxActive = false },
-    },
-  },
-  {
-    id = "candle-desk",
-    label = "Desk Candle",
-    zIndex = 3,
-    interactive = true,
-    priority = 14,
-    labelBelow = false,
-    outline = "all",
-    action = {
-      type = "toggle-state",
-      fxSelector = ".fx-candle-desk",
-      storageKey = "study:candle-desk",
-    },
-    defaultState = "lit",
-    states = {
-      { id = "lit",   layer = "prop_candle_desk_lit",   file = "candle-desk-lit.png",   fxActive = true },
-      { id = "unlit", layer = "prop_candle_desk_unlit", file = "candle-desk-unlit.png", fxActive = false },
-    },
-  },
-  {
-    id = "candle-bench",
-    label = "Window Candle",
-    zIndex = 3,
-    interactive = true,
-    priority = 15,
-    labelBelow = false,
-    outline = "all",
-    action = {
-      type = "toggle-state",
-      fxSelector = ".fx-candle-bench",
-      storageKey = "study:candle-bench",
-    },
-    defaultState = "lit",
-    states = {
-      { id = "lit",   layer = "prop_candle_bench_lit",   file = "candle-bench-lit.png",   fxActive = true },
-      { id = "unlit", layer = "prop_candle_bench_unlit", file = "candle-bench-unlit.png", fxActive = false },
-    },
-  },
-}
-
--- 记录已知图层名，便于自动发现用户在 Aseprite 中新增的其他 prop_* 图层
+-- 3. 导出场景零件（只导出已绘制了非透明像素的图层）
+local PROP_SPECS = room.props
 local knownLayers = {
   ["00_room_base"] = true,
   ["99_hotspot_mask"] = true,
@@ -322,11 +551,41 @@ for _, p in ipairs(PROP_SPECS) do
   end
 end
 
--- 自动扫描用户未来在 study-master.aseprite 中新增的独立 prop_<id> 图层
+-- Visible paper layers are authored by title; export-only IDs keep arbitrary
+-- titles (including duplicates) out of file paths and layer-name lookups.
+local function collectNoticePapers(group)
+  if not group.isVisible then return end
+  for index, layer in ipairs(group.layers) do
+    local first = not layer.isGroup and layer:cel(1)
+    if layer.isVisible and first then
+      local id = "notice-paper-" .. index
+      local title, text = layer.name, layer.data
+      layer.name = "_export_" .. id
+      -- Papers are stationary. Moving a paper on frame 1 sets its web position.
+      for frame = numFrames, 2, -1 do
+        local cel = layer:cel(frame)
+        if cel then spr:deleteCel(cel) end
+      end
+      local readable = text ~= "" and text ~= nil
+      table.insert(PROP_SPECS, {
+        id = id, label = title, zIndex = 4, priority = 15, interactive = readable,
+        outline = "largest", defaultState = "default",
+        action = readable and { type = "read-note", text = text } or nil,
+        states = { { id = "default", layer = layer.name, file = id .. ".png" } },
+      })
+    end
+  end
+end
+
+-- 自动扫描用户在 Aseprite 中新增的独立 prop_<id> 图层（忽略 _ref_* 等辅助层）
 local function discoverCustomPropLayers(layers)
   for _, layer in ipairs(layers) do
     if layer.isGroup then
-      discoverCustomPropLayers(layer.layers)
+      if roomId == "side" and layer.name == "35_notice_papers" then
+        collectNoticePapers(layer)
+      elseif not knownLayers[layer.name] then
+        discoverCustomPropLayers(layer.layers)
+      end
     elseif not knownLayers[layer.name] and layer.name:sub(1, 5) == "prop_" then
       local rawId = layer.name:sub(6):gsub("_", "-")
       knownLayers[layer.name] = true
@@ -349,47 +608,72 @@ local exportedProps = {}
 
 for _, prop in ipairs(PROP_SPECS) do
   local layerNames = {}
+  local states = {}
+  local missingLayer = false
   for _, st in ipairs(prop.states) do
-    table.insert(layerNames, st.layer)
+    local layer = findLayer(spr.layers, st.layer)
+    if not layer and not st.optional then
+      missingLayer = true
+    elseif layer and layer.isGroup then
+      -- 仅在未保存的导出副本中合成这个零件，母版保留可编辑的层板和书组。
+      local parent, index = layer.parent, layer.stackIndex
+      app.range.layers = { layer }
+      app.command.FlattenLayers()
+      parent.layers[index].name = st.layer
+      app.range:clear()
+    end
+    if not st.optional or (layer and computeUnionBounds({ st.layer })) then
+      table.insert(layerNames, st.layer)
+      table.insert(states, st)
+    end
   end
-  local bounds = computeUnionBounds(layerNames)
-  if bounds then
-    local statesMeta = {}
-    for _, st in ipairs(prop.states) do
-      local relFile = "props/" .. st.file
-      local outPath = "public/art/study/mage/" .. relFile
-      local frames = exportTrimmedLayer(st.layer, bounds, outPath, EXPORT_SCALE)
-      print(string.format("Exported %s (%dx%d @ %dx, %d frame(s))", relFile, bounds.width, bounds.height, EXPORT_SCALE, frames))
-      table.insert(statesMeta, {
-        id = st.id,
-        src = relFile,
-        frames = frames,
-        frameDurationMs = frameDurationMs,
-        fxActive = st.fxActive,
-        caption = st.caption,
+  if not missingLayer then
+    local bounds = computeUnionBounds(layerNames)
+    if bounds then
+      local statesMeta = {}
+      for _, st in ipairs(states) do
+        local relFile = "props/" .. st.file
+        local outPath = room.outDir .. relFile
+        local frames = exportTrimmedLayer(st.layer, bounds, outPath, room.exportScale)
+        print(string.format("[%s] Exported %s (%dx%d @ %dx, %d frame(s))", roomId, relFile, bounds.width, bounds.height, room.exportScale, frames))
+        table.insert(statesMeta, {
+          id = st.id,
+          src = relFile,
+          frames = frames,
+          frameDurationMs = st.durationMs or frameDurationMs,
+          fxActive = st.fxActive,
+          caption = st.caption,
+        })
+      end
+      table.insert(exportedProps, {
+        id = prop.id,
+        label = prop.label,
+        x = bounds.x,
+        y = bounds.y,
+        width = bounds.width,
+        height = bounds.height,
+        zIndex = prop.zIndex,
+        interactive = prop.interactive,
+        priority = prop.priority,
+        labelBelow = prop.labelBelow,
+        outline = prop.outline,
+        action = prop.action,
+        defaultState = prop.defaultState,
+        states = statesMeta,
       })
     end
-    table.insert(exportedProps, {
-      id = prop.id,
-      label = prop.label,
-      x = bounds.x,
-      y = bounds.y,
-      width = bounds.width,
-      height = bounds.height,
-      zIndex = prop.zIndex,
-      interactive = prop.interactive,
-      priority = prop.priority,
-      labelBelow = prop.labelBelow,
-      outline = prop.outline,
-      action = prop.action,
-      defaultState = prop.defaultState,
-      states = statesMeta,
-    })
   end
 end
 
--- 4. 序列化为格式化的 JSON 写入 src/study-scene.json
-local function toJson(val, indent)
+-- 4. 序列化为格式化的 JSON 写入 manifestPath
+local ARRAY_KEYS = {
+  sections = true,
+  props = true,
+  states = true,
+  color = true,
+}
+
+local function toJson(val, indent, keyName)
   indent = indent or 0
   local pad = string.rep("  ", indent)
   local nextPad = string.rep("  ", indent + 1)
@@ -399,22 +683,29 @@ local function toJson(val, indent)
   elseif t == "boolean" or t == "number" then
     return tostring(val)
   elseif t == "string" then
-    return string.format("%q", val)
+    -- Lua's %q emits Lua-only escapes for multiline user data.
+    local escaped = val:gsub('[%z\1-\31\\"]', function(char)
+      if char == '"' or char == '\\' then return '\\' .. char end
+      return string.format('\\u%04x', string.byte(char))
+    end)
+    return '"' .. escaped .. '"'
   elseif t == "table" then
-    local isArray = (#val > 0)
+    local isArray = (#val > 0) or (keyName and ARRAY_KEYS[keyName])
     if isArray then
-      -- 紧凑输出 RGB 颜色三元组 [r, g, b]
+      if #val == 0 then
+        return "[]"
+      end
       if #val == 3 and type(val[1]) == "number" then
         return string.format("[%d, %d, %d]", val[1], val[2], val[3])
       end
       local items = {}
       for i = 1, #val do
-        table.insert(items, nextPad .. toJson(val[i], indent + 1))
+        table.insert(items, nextPad .. toJson(val[i], indent + 1, nil))
       end
       return "[\n" .. table.concat(items, ",\n") .. "\n" .. pad .. "]"
     else
       local keyOrder = {
-        "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
+        "roomId", "artBase", "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
         "background", "hotspotMask", "sections", "props",
         "id", "label", "key", "color", "x", "y", "width", "height", "zIndex",
         "interactive", "priority", "labelBelow", "outline",
@@ -436,7 +727,7 @@ local function toJson(val, indent)
       end
       local pairsList = {}
       for _, k in ipairs(keys) do
-        table.insert(pairsList, nextPad .. string.format("%q", k) .. ": " .. toJson(val[k], indent + 1))
+        table.insert(pairsList, nextPad .. string.format("%q", k) .. ": " .. toJson(val[k], indent + 1, k))
       end
       return "{\n" .. table.concat(pairsList, ",\n") .. "\n" .. pad .. "}"
     end
@@ -445,20 +736,22 @@ local function toJson(val, indent)
 end
 
 local manifest = {
+  roomId = roomId,
+  artBase = room.artBase,
   baseWidth = baseW,
   baseHeight = baseH,
-  exportScale = EXPORT_SCALE,
-  exportWidth = baseW * EXPORT_SCALE,
-  exportHeight = baseH * EXPORT_SCALE,
+  exportScale = room.exportScale,
+  exportWidth = baseW * room.exportScale,
+  exportHeight = baseH * room.exportScale,
   background = "study.png",
   hotspotMask = "hotspots.png",
   sections = exportedSections,
   props = exportedProps,
 }
 
-local f = io.open("src/study-scene.json", "w")
-f:write(toJson(manifest, 0) .. "\n")
+local f = io.open(room.manifestPath, "w")
+f:write(toJson(manifest, 0, nil) .. "\n")
 f:close()
-print("Generated src/study-scene.json (" .. #exportedSections .. " sections, " .. #exportedProps .. " modular props).")
+print(string.format("[%s] Generated %s (%d section(s), %d modular prop(s)).", roomId, room.manifestPath, #exportedSections, #exportedProps))
 
 spr:close()

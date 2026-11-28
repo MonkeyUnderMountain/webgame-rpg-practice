@@ -8,25 +8,74 @@ import '@fontsource-variable/eb-garamond/wght-italic.css';
 import './style.css';
 import { mountMusic } from './music';
 import { mountReadingPanel } from './readingPanel';
-import { mountStudy } from './study';
-import sideViewReference from '../artwork/study/side-view/reference.jpg';
-import stone from '../artwork/study/side-view/variants/study-side-view-stone-sanctum.jpg';
-import stoneWorkstation from '../artwork/study/side-view/variants/study-side-view-stone-workstation.png';
-import sunlitWorkstation from '../artwork/study/side-view/variants/study-side-view-stone-workstation-sunlit.jpg';
-import daylight from '../artwork/study/side-view/variants/study-side-view-detailed-daylight.jpg';
-import moon from '../artwork/study/side-view/variants/study-side-view-moon.jpg';
-import herbal from '../artwork/study/side-view/variants/study-side-view-herbal.jpg';
-import ember from '../artwork/study/side-view/variants/study-side-view-ember.jpg';
+import { mountStudy, type SceneManifest } from './study';
+import mageSceneData from './study-scene.json';
+import sideSceneData from './study-side-scene.json';
 
+const sideViewImages = import.meta.glob<{ default: string }>(
+  ['../artwork/study/side-view/reference.jpg', '../artwork/study/side-view/variants/*'],
+);
 
+type SideStyleSpec = {
+  id: string;
+  label: string;
+  assetPath?: string;
+};
+
+const SIDE_STYLES: SideStyleSpec[] = [
+  { id: 'interactive', label: 'Pixel study · 640×360 (default)' },
+  {
+    id: 'tiled-960',
+    label: 'Original tiled room · 960×540',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-tiled-960.png',
+  },
+  {
+    id: 'stone-wide-board',
+    label: 'Reference · sunlit study',
+    assetPath: '../artwork/study/side-view/reference.jpg',
+  },
+  {
+    id: 'stone',
+    label: "Mage's stone study",
+    assetPath: '../artwork/study/side-view/variants/study-side-view-stone-sanctum.jpg',
+  },
+  {
+    id: 'stone-workstation',
+    label: 'Stone workstation · dusk',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-stone-workstation.png',
+  },
+  {
+    id: 'stone-sunlit',
+    label: 'Stone workstation · sunny day',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-stone-workstation-sunlit.jpg',
+  },
+  {
+    id: 'daylight',
+    label: 'Daylight study',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-detailed-daylight.jpg',
+  },
+  {
+    id: 'moon',
+    label: 'Moonlit observatory',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-moon.jpg',
+  },
+  {
+    id: 'herbal',
+    label: 'Rainy herbarium',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-herbal.jpg',
+  },
+  {
+    id: 'ember',
+    label: 'Ember runes',
+    assetPath: '../artwork/study/side-view/variants/study-side-view-ember.jpg',
+  },
+];
 
 function element<T extends HTMLElement>(id: string): T {
   const result = document.getElementById(id);
   if (!result) throw new Error(`Missing element: ${id}`);
   return result as T;
 }
-
-
 
 function mountDoorDialog(dialog: HTMLDialogElement) {
   const closeButton = dialog.querySelector<HTMLButtonElement>('#close-door');
@@ -56,52 +105,75 @@ function mountDoorDialog(dialog: HTMLDialogElement) {
   });
 }
 
-
-
-function mountSidePreview(scene: HTMLElement, art: HTMLElement) {
-  const styles = [
-    { id: 'stone-wide-board', label: 'Reference · sunlit study', src: sideViewReference },
-    { id: 'stone', label: "Mage's stone study", src: stone },
-    { id: 'stone-workstation', label: 'Stone workstation · dusk', src: stoneWorkstation },
-    { id: 'stone-sunlit', label: 'Stone workstation · sunny day', src: sunlitWorkstation },
-    { id: 'daylight', label: 'Daylight study', src: daylight },
-    { id: 'moon', label: 'Moonlit observatory', src: moon },
-    { id: 'herbal', label: 'Rainy herbarium', src: herbal },
-    { id: 'ember', label: 'Ember runes', src: ember },
-  ];
+function mountSideRoom(scene: HTMLElement, art: HTMLElement) {
   const select = element<HTMLSelectElement>('room-style');
   const notice = element('study-art-error');
-  const image = new Image();
-  image.addEventListener('error', () => { notice.hidden = false; });
-  scene.classList.add('side-preview');
-  scene.setAttribute('aria-label', 'Side-view study preview');
-  art.append(image);
-
-  for (const style of styles) select.add(new Option(style.label, style.id));
-  function showStyle(id: string | null) {
-    const style = styles.find((item) => item.id === id) ?? styles[0];
-    notice.hidden = true;
-    select.value = style.id;
-    image.alt = `${style.label}: side view of the study with a chalkboard, desk and valley window`;
-    image.src = style.src;
+  for (const style of SIDE_STYLES) {
+    select.add(new Option(style.label, style.id));
   }
-  showStyle(new URLSearchParams(location.search).get('style'));
+
+  const requestedStyle = new URLSearchParams(location.search).get('style');
+  const activeStyle = SIDE_STYLES.find((item) => item.id === requestedStyle) ?? SIDE_STYLES[0];
+  const isInteractive = activeStyle.id === 'interactive';
+
+  const showStaticStyle = async (image: HTMLImageElement, style: SideStyleSpec) => {
+    notice.hidden = true;
+    const loader = style.assetPath ? sideViewImages[style.assetPath] : undefined;
+    if (!loader) {
+      notice.hidden = false;
+      return;
+    }
+    try {
+      const mod = await loader();
+      if (select.value !== style.id) return;
+      const originalRoom = style.id === 'tiled-960';
+      image.classList.toggle('study-image', originalRoom);
+      image.alt = originalRoom ? style.label : `${style.label}: side view of the study with a chalkboard, desk and valley window`;
+      image.src = mod.default;
+    } catch {
+      if (select.value === style.id) notice.hidden = false;
+    }
+  };
+
+  select.value = activeStyle.id;
+  if (isInteractive) {
+    mountStudy(scene, art, sideSceneData as SceneManifest);
+  } else {
+    const image = new Image();
+    image.addEventListener('error', () => { notice.hidden = false; });
+    scene.classList.add('side-preview');
+    scene.setAttribute('aria-label', 'Side-view study preview');
+    art.append(image);
+
+    void showStaticStyle(image, activeStyle);
+  }
+
   select.addEventListener('change', () => {
-    showStyle(select.value);
+    const next = SIDE_STYLES.find((item) => item.id === select.value) ?? SIDE_STYLES[0];
     const url = new URL(location.href);
-    url.searchParams.set('style', select.value);
+    if (next.id === 'interactive') url.searchParams.delete('style');
+    else url.searchParams.set('style', next.id);
+
+    const switchingMode = isInteractive !== (next.id === 'interactive');
+    if (switchingMode) {
+      location.assign(url.toString());
+      return;
+    }
+
     history.replaceState(null, '', url);
+    const image = art.querySelector('img');
+    if (!isInteractive && image) void showStaticStyle(image, next);
   });
+
   element('room-picker').hidden = false;
 }
 
-// 侧视预览只展示插画；原书房仍使用零件、热点和动画。
 const scene = element('study-scene');
 const art = element('study-art');
 if (new URLSearchParams(location.search).get('room') === 'side') {
-  mountSidePreview(scene, art);
+  mountSideRoom(scene, art);
 } else {
-  mountStudy(scene, art);
+  mountStudy(scene, art, mageSceneData as SceneManifest);
 }
 mountMusic(element<HTMLAudioElement>('study-music'), element<HTMLButtonElement>('music-toggle'));
 mountReadingPanel(element<HTMLDialogElement>('section-dialog'));

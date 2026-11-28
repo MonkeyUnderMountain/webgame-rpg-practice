@@ -6,11 +6,12 @@
 
 ## 1. 用 Aseprite 修改像素零件、帧动画与热点掩膜
 
-书房场景采用 **`960×540`（16:9）基准网格、导出 `2×`（`1920×1080`）** 的分层工作流。所有美术图层集中在唯一主工程文件：
+两套书房各有独立的像素网格和 Aseprite 主工程，底图均按整数倍导出为 `1920×1080`：
 
-- **Aseprite 主工程**：[`artwork/study/study-master.aseprite`](../artwork/study/study-master.aseprite)（`960×540`，4 帧循环动画，每帧 `180ms`）
+- **默认书房 Aseprite 主工程**：[`artwork/study/study-master.aseprite`](../artwork/study/study-master.aseprite)（`960×540`，`2×` 导出，4 帧循环动画，每帧 `180ms`）
+- **侧视书房 Aseprite 主工程**：[`artwork/study/side-view/study-side-master.aseprite`](../artwork/study/side-view/study-side-master.aseprite)（`640×360`，`3×` 导出，4 帧共用 23 色底图；缩放后的参考图保留在隐藏层 `_ref_reference`）
 
-### 主工程图层结构
+### 默认书房的图层结构
 
 | 图层 / 图层组 | 作用 |
 | --- | --- |
@@ -27,22 +28,32 @@
    - 按 **`Enter`** 可直接在 Aseprite 内预览 4 帧烛火动画；
    - 点击图层左侧的**眼睛图标**可切换查看隐藏的状态层（如 `prop_chalkboard_d2`、`prop_chalkboard_d3` 或 `*_unlit`）；
    - 如果想新增一个独立零件（例如把书架上的乌鸦或新家具拆成独立层），只需新建一个以 `prop_` 开头的图层（如 `prop_crow`），在 `960×540` 画布对应位置绘制即可。
-2. 保存 `.aseprite` 文件后，在终端运行一键导出命令：
+2. 保存 `.aseprite` 文件后，在终端运行对应房间的一键导出命令：
    ```powershell
-   npm.cmd run art:export
+   npm.cmd run art:export       # 导出默认书房 -> public/art/study/mage/ & src/study-scene.json
+   npm.cmd run art:side:export  # 导出侧视书房 -> public/art/study/side/ & src/study-side-scene.json
    ```
    导出脚本 [`scripts/export-study.lua`](../scripts/export-study.lua) 会自动：
-   - 将 `00_room_base` 按 `2×` 导出为 `public/art/study/mage/study.png`（`1920×1080`）；
-   - 将 `99_hotspot_mask` 导出为 `public/art/study/mage/hotspots.png`（`960×540`），并自动计算六大主栏目的包围盒；
-   - 自动计算每个零件图层在 `960×540` 画布上的最小非透明包围盒 `(x, y, width, height)`，裁掉透明边并按 `2×` 导出单张 PNG 或多帧横向 Sprite Sheet 到 `public/art/study/mage/props/`；
-   - 自动更新 [`src/study-scene.json`](../src/study-scene.json)。
-3. **自动轮廓与像素命中**：凡是在 `study-scene.json` 中标记为 `interactive: true` 的零件，前端会直接读取其 PNG 的 `Alpha ≥ 16` 不透明像素生成点击命中区与 Marching Squares 金色描边，无需任何手工涂抹。
-4. 如果想从原始母图（`artwork/study/source-room.png` 与 `source-hotspots.png`）重新初始化生成 `study-master.aseprite`，可运行：
+   - 将 `00_room_base` 按该房间的倍率导出为 `study.png`（`1920×1080`）；
+   - 将 `99_hotspot_mask` 按原画布尺寸导出为 `hotspots.png`，并计算已填涂栏目的包围盒；
+   - 计算每个非空零件在原画布上的最小非透明包围盒 `(x, y, width, height)`，裁掉透明边并按该房间的倍率导出单张 PNG 或多帧横向 Sprite Sheet 到 `props/`；
+   - 自动更新 [`src/study-scene.json`](../src/study-scene.json) 或 [`src/study-side-scene.json`](../src/study-side-scene.json)。
+3. **自动轮廓与像素命中**：凡是在场景 JSON 中标记为 `interactive: true` 的零件，前端会直接读取其 PNG 的 `Alpha ≥ 16` 不透明像素生成点击命中区与 Marching Squares 金色描边，无需任何手工涂抹。
+4. 如果想从原始母图重新初始化生成主工程，可分别运行：
    ```powershell
    npm.cmd run art:init
+   npm.cmd run art:side:init
    ```
 
 ---
+
+### 侧视书房：在 Aseprite 里贴便签
+
+打开侧视母版，展开 `35_notice_papers`，复制其中一张纸片的**整个图层**。在第 1 帧把副本移到软木板上：每张便签使用同一款纸片，图层名是标题，**Layer Properties → User Data** 的文本是访客点击后读到的正文（支持换行和中文）。空正文只显示纸片；隐藏或删除图层就能取下便签。保存后运行 `npm.cmd run art:side:export`，在 `/?room=side` 查看。
+
+黑板底色、木框和粉笔槽在 `prop_chalkboard_frame`，几何图单独在 `30_chalkboard/prop_chalkboard_d1`。窗框和窗景分别是 `prop_window_frame` 与 `prop_window_view`，挪窗时要一起移动。
+
+壁灯的火苗按四帧画在 `wall-lamp-flame-1…4.png`，灯座共用 `wall-lamp.png`；暖色墙光和地面光池是独立的 `prop_wall_lamp_glow`，地面冷影是 `prop_floor_shade`。显示器上的运算光点在 `prop_monitor_pulse` 的四帧里移动；动画速度由 `scripts/export-study.lua` 中对应 state 的 `durationMs` 控制。书柜第三层的黄铜四面体是 `shelf_3/tetrahedron`，可以单独隐藏或移动。
 
 ## 2. 修改数学笔记或其他栏目正文
 

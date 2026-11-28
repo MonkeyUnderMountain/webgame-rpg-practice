@@ -411,6 +411,7 @@ nav a[aria-current] { color: var(--gold); }
   font-size: 0.7rem;
   opacity: 0.85;
 }
+.notice-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .scroll-content h2 {
   margin: 0 44px 22px 0;
   padding-bottom: 14px;

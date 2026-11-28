@@ -1,16 +1,12 @@
-import sceneData from './study-scene.json';
+import defaultSceneData from './study-scene.json';
 import {
   contoursToPath, decodeMask, lookupMask, maskFromAlpha, stampMask, traceLabel,
   type Contour, type MaskData, type Rgb,
 } from './hotspotMask';
 
-// 基准网格 960×540（与 study-master.aseprite 及 hotspots.png 一致），底图与零件导出为 2× (1920×1080)。
-const studyBase = { width: sceneData.baseWidth, height: sceneData.baseHeight };
-const studyExport = { width: sceneData.exportWidth, height: sceneData.exportHeight };
-
 type HotspotId = string;
 
-type SectionSpec = {
+export type SectionSpec = {
   id: string;
   label: string;
   key: number;
@@ -24,7 +20,7 @@ type SectionSpec = {
   outline: 'all' | 'largest';
 };
 
-type PropStateSpec = {
+export type PropStateSpec = {
   id: string;
   src: string;
   frames: number;
@@ -33,14 +29,15 @@ type PropStateSpec = {
   caption?: string;
 };
 
-type PropActionSpec = {
-  type: 'toggle-state' | 'cycle-target';
+export type PropActionSpec = {
+  type: 'toggle-state' | 'cycle-target' | 'read-note';
+  text?: string;
   fxSelector?: string;
   targetProp?: string;
   storageKey?: string;
 };
 
-type PropSpec = {
+export type PropSpec = {
   id: string;
   label: string;
   x: number;
@@ -55,6 +52,20 @@ type PropSpec = {
   action?: PropActionSpec;
   defaultState: string;
   states: PropStateSpec[];
+};
+
+export type SceneManifest = {
+  roomId?: string;
+  artBase?: string;
+  baseWidth: number;
+  baseHeight: number;
+  exportScale: number;
+  exportWidth: number;
+  exportHeight: number;
+  background: string;
+  hotspotMask: string;
+  sections: SectionSpec[];
+  props: PropSpec[];
 };
 
 type HotspotItem = {
@@ -73,48 +84,16 @@ type HotspotItem = {
   prop?: PropSpec;
 };
 
+type BoundsRect = {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+};
+
 function toRectPath(x: number, y: number, width: number, height: number): string {
   return `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${y + height} L ${x} ${y + height} Z`;
 }
-
-const sceneSections = (sceneData.sections ?? []) as SectionSpec[];
-const sceneProps = (sceneData.props ?? []) as PropSpec[];
-const interactiveProps = sceneProps
-  .filter((prop) => prop.interactive)
-  .sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
-
-const sectionHotspots: HotspotItem[] = sceneSections.map((sec) => ({
-  id: sec.id,
-  label: sec.label,
-  key: sec.key,
-  priority: sec.priority,
-  labelBelow: sec.labelBelow,
-  outline: sec.outline,
-  kind: sec.id === 'door' ? 'door' : 'section',
-  xPercent: (sec.x / studyBase.width) * 100,
-  yPercent: (sec.y / studyBase.height) * 100,
-  widthPercent: (sec.width / studyBase.width) * 100,
-  heightPercent: (sec.height / studyBase.height) * 100,
-  fallbackPath: toRectPath(sec.x, sec.y, sec.width, sec.height),
-}));
-
-const propHotspots: HotspotItem[] = interactiveProps.map((prop, index) => ({
-  id: prop.id,
-  label: prop.label,
-  key: sceneSections.length + 1 + index,
-  priority: prop.priority ?? (10 + index),
-  labelBelow: prop.labelBelow,
-  outline: prop.outline ?? 'all',
-  kind: 'prop',
-  xPercent: (prop.x / studyBase.width) * 100,
-  yPercent: (prop.y / studyBase.height) * 100,
-  widthPercent: (prop.width / studyBase.width) * 100,
-  heightPercent: (prop.height / studyBase.height) * 100,
-  fallbackPath: toRectPath(prop.x, prop.y, prop.width, prop.height),
-  prop,
-}));
-
-const allHotspots: HotspotItem[] = [...sectionHotspots, ...propHotspots];
 
 const propDebugColors: Rgb[] = [
   [255, 230, 105],
@@ -123,23 +102,6 @@ const propDebugColors: Rgb[] = [
   [196, 255, 110],
   [140, 195, 255],
 ];
-
-const colors: Rgb[] = [[0, 0, 0]];
-for (const sec of sceneSections) {
-  colors[sec.key] = sec.color;
-}
-propHotspots.forEach((spot, index) => {
-  colors[spot.key] = propDebugColors[index % propDebugColors.length];
-});
-
-const labelToId = new Map<number, HotspotId>(
-  allHotspots.map((spot) => [spot.key, spot.id]),
-);
-const hotspotsById = new Map<HotspotId, HotspotItem>(
-  allHotspots.map((spot) => [spot.id, spot]),
-);
-
-
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -177,12 +139,95 @@ function writeStorage(key: string | undefined, value: string) {
   }
 }
 
-
+const DEFAULT_SECTION_SPECS: Array<{ key: number; color: Rgb }> = [
+  { key: 1, color: [58, 215, 255] },
+  { key: 2, color: [89, 226, 138] },
+  { key: 3, color: [255, 210, 122] },
+  { key: 4, color: [255, 154, 120] },
+  { key: 5, color: [214, 140, 255] },
+  { key: 6, color: [255, 122, 168] },
+];
 
 // 链接、房门与可替换像素零件叠在同一张 960×540 逻辑画布上；缩放时热点、轮廓和标签同步缩放。
-export function mountStudy(scene: HTMLElement, art: HTMLElement) {
-  const artRoot = `${import.meta.env.BASE_URL}art/study/mage/`;
+export function mountStudy(
+  scene: HTMLElement,
+  art: HTMLElement,
+  sceneData: SceneManifest = defaultSceneData as SceneManifest,
+) {
+  const studyBase = { width: sceneData.baseWidth, height: sceneData.baseHeight };
+  const studyExport = { width: sceneData.exportWidth, height: sceneData.exportHeight };
+  const roomId = sceneData.roomId ?? 'mage';
+  const artBase = sceneData.artBase ?? 'art/study/mage/';
+  const artRoot = `${import.meta.env.BASE_URL}${artBase}`;
   const svgNs = 'http://www.w3.org/2000/svg';
+
+  const sceneSections = sceneData.sections ?? [];
+  const sceneProps = sceneData.props ?? [];
+  const interactiveProps = sceneProps
+    .filter((prop) => prop.interactive)
+    .sort((a, b) => (a.priority ?? 10) - (b.priority ?? 10));
+
+  const sectionHotspots: HotspotItem[] = sceneSections.map((sec) => ({
+    id: sec.id,
+    label: sec.label,
+    key: sec.key,
+    priority: sec.priority,
+    labelBelow: sec.labelBelow,
+    outline: sec.outline,
+    kind: sec.id === 'door' ? 'door' : 'section',
+    xPercent: (sec.x / studyBase.width) * 100,
+    yPercent: (sec.y / studyBase.height) * 100,
+    widthPercent: (sec.width / studyBase.width) * 100,
+    heightPercent: (sec.height / studyBase.height) * 100,
+    fallbackPath: toRectPath(sec.x, sec.y, sec.width, sec.height),
+  }));
+
+  const maxSectionKey = sceneSections.reduce((max, sec) => Math.max(max, sec.key), 6);
+  const propHotspots: HotspotItem[] = interactiveProps.map((prop, index) => ({
+    id: prop.id,
+    label: prop.label,
+    key: maxSectionKey + 1 + index,
+    priority: prop.priority ?? (10 + index),
+    labelBelow: prop.labelBelow,
+    outline: prop.outline ?? 'all',
+    kind: 'prop',
+    xPercent: (prop.x / studyBase.width) * 100,
+    yPercent: (prop.y / studyBase.height) * 100,
+    widthPercent: (prop.width / studyBase.width) * 100,
+    heightPercent: (prop.height / studyBase.height) * 100,
+    fallbackPath: toRectPath(prop.x, prop.y, prop.width, prop.height),
+    prop,
+  }));
+
+  const allHotspots: HotspotItem[] = [...sectionHotspots, ...propHotspots];
+
+  const colors: Rgb[] = [[0, 0, 0]];
+  for (const spec of DEFAULT_SECTION_SPECS) {
+    colors[spec.key] = spec.color;
+  }
+  for (const sec of sceneSections) {
+    colors[sec.key] = sec.color;
+  }
+  propHotspots.forEach((spot, index) => {
+    colors[spot.key] = propDebugColors[index % propDebugColors.length];
+  });
+
+  const labelToId = new Map<number, HotspotId>(
+    allHotspots.map((spot) => [spot.key, spot.id]),
+  );
+  const hotspotsById = new Map<HotspotId, HotspotItem>(
+    allHotspots.map((spot) => [spot.id, spot]),
+  );
+
+  const hotspotBounds: BoundsRect = sectionHotspots.length > 0
+    ? {
+        left: Math.min(...sectionHotspots.map((spot) => spot.xPercent)) / 100 * studyBase.width,
+        right: Math.max(...sectionHotspots.map((spot) => spot.xPercent + spot.widthPercent)) / 100 * studyBase.width,
+        top: Math.min(...sectionHotspots.map((spot) => spot.yPercent)) / 100 * studyBase.height,
+        bottom: Math.max(...sectionHotspots.map((spot) => spot.yPercent + spot.heightPercent)) / 100 * studyBase.height,
+      }
+    : { left: 0, right: studyBase.width, top: 0, bottom: studyBase.height };
+
   scene.style.setProperty('--study-ratio', `${studyBase.width} / ${studyBase.height}`);
 
   const image = new Image(studyExport.width, studyExport.height);
@@ -203,25 +248,27 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   propsLayer.setAttribute('aria-hidden', 'true');
   art.append(propsLayer);
 
-  // 环境光效：烛光、窗光、星点和灰尘。烛光可由蜡烛微交互点亮或吹灭。
+  // 环境光效层：原法师书房使用预设烛光与星尘锚点；新侧视房间先保留干净光照，后续按零件补充。
   const ambient = document.createElement('div');
   ambient.className = 'study-fx';
   ambient.setAttribute('aria-hidden', 'true');
-  ambient.innerHTML = `
-    <span class="fx-glow fx-candle fx-candle-desk"></span>
-    <span class="fx-glow fx-candle fx-candle-column"></span>
-    <span class="fx-glow fx-candle fx-candle-bench"></span>
-    <span class="fx-glow fx-window"></span>
-    <span class="fx-glow fx-door"></span>
-    <span class="fx-star fx-star-1"></span>
-    <span class="fx-star fx-star-2"></span>
-    <span class="fx-star fx-star-3"></span>
-    <span class="fx-dust fx-dust-1"></span>
-    <span class="fx-dust fx-dust-2"></span>
-    <span class="fx-dust fx-dust-3"></span>
-    <span class="fx-dust fx-dust-4"></span>
-    <span class="fx-dust fx-dust-5"></span>
-  `;
+  if (roomId === 'mage') {
+    ambient.innerHTML = `
+      <span class="fx-glow fx-candle fx-candle-desk"></span>
+      <span class="fx-glow fx-candle fx-candle-column"></span>
+      <span class="fx-glow fx-candle fx-candle-bench"></span>
+      <span class="fx-glow fx-window"></span>
+      <span class="fx-glow fx-door"></span>
+      <span class="fx-star fx-star-1"></span>
+      <span class="fx-star fx-star-2"></span>
+      <span class="fx-star fx-star-3"></span>
+      <span class="fx-dust fx-dust-1"></span>
+      <span class="fx-dust fx-dust-2"></span>
+      <span class="fx-dust fx-dust-3"></span>
+      <span class="fx-dust fx-dust-4"></span>
+      <span class="fx-dust fx-dust-5"></span>
+    `;
+  }
   art.append(ambient);
 
   // 挂载每个模块化零件及其状态精灵图
@@ -337,7 +384,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   }
   art.append(outlineMap);
 
-  // 创建 6 大栏目热点与场景内微交互零件按钮
+  // 创建主栏目热点与场景内微交互零件按钮
   for (const spot of allHotspots) {
     const wrap = document.createElement('div');
     wrap.className = `hotspot-wrap hotspot-${spot.id}${spot.labelBelow ? ' label-below' : ''}`;
@@ -387,7 +434,11 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
       syncActive();
     });
 
-    if (spot.kind === 'prop' && spot.prop) {
+    if (spot.prop?.action?.type === 'read-note' && spot.prop.action.text) {
+      hotspot.dataset.noticeText = spot.prop.action.text;
+      hotspot.setAttribute('aria-haspopup', 'dialog');
+      hotspot.setAttribute('aria-controls', 'section-dialog');
+    } else if (spot.kind === 'prop' && spot.prop) {
       const { prop } = spot;
       hotspot.addEventListener('click', (event) => {
         event.preventDefault();
@@ -454,14 +505,15 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
     anchor.click();
   }
 
-  const resize = () => fitStudyToScene(scene, art);
+  const resize = () => fitStudyToScene(scene, art, studyBase, hotspotBounds);
   new ResizeObserver(resize).observe(scene);
   resize();
 
   // 初次进入书房时，用一次轻柔的微光扫过物件轮廓，提示房间里的物件可以点击。
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const playIntroHint = () => {
-      const order: HotspotId[] = ['news', 'research', 'profile', 'notes', 'quests', 'door'];
+      const preferredOrder: HotspotId[] = ['news', 'research', 'profile', 'notes', 'quests', 'door'];
+      const order = preferredOrder.filter((id) => shapes.has(id));
       order.forEach((id, index) => {
         const path = shapes.get(id);
         if (!path) return;
@@ -478,7 +530,7 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   }
 
   // 掩膜决定鼠标命中区域和金色轮廓：
-  // 1) 六大栏目从 960×540 的 hotspots.png 解码并提取完整外轮廓；
+  // 1) 主栏目从 960×540 的 hotspots.png 解码并提取完整外轮廓；
   // 2) 独立拆出的可交互零件直接读取自身 PNG 的 Alpha ≥ 16 通道自动合成命中区与 Marching Squares 金色描边。
   const contourCache = new Map<HotspotId, Contour[]>();
   const isolatedPropMasks = new Map<HotspotId, MaskData>();
@@ -668,18 +720,14 @@ export function mountStudy(scene: HTMLElement, art: HTMLElement) {
   });
 }
 
-
-
-// 热点在 960×540 基准图中的最外围边界固定，窗口缩放时只需重新计算画布的位置和比例。
-const hotspotBounds = {
-  left: Math.min(...sectionHotspots.map((spot) => spot.xPercent)) / 100 * studyBase.width,
-  right: Math.max(...sectionHotspots.map((spot) => spot.xPercent + spot.widthPercent)) / 100 * studyBase.width,
-  top: Math.min(...sectionHotspots.map((spot) => spot.yPercent)) / 100 * studyBase.height,
-  bottom: Math.max(...sectionHotspots.map((spot) => spot.yPercent + spot.heightPercent)) / 100 * studyBase.height,
-};
 const desktopInsets = { side: 0, top: 0, bottom: 0 };
 
-function fitStudyToScene(scene: HTMLElement, art: HTMLElement) {
+function fitStudyToScene(
+  scene: HTMLElement,
+  art: HTMLElement,
+  studyBase: { width: number; height: number },
+  hotspotBounds: BoundsRect,
+) {
   const width = scene.clientWidth;
   const height = scene.clientHeight;
   if (!width || !height) return;
@@ -688,9 +736,11 @@ function fitStudyToScene(scene: HTMLElement, art: HTMLElement) {
   const desktop = !window.matchMedia('(max-width: 760px)').matches;
   if (desktop) {
     const cover = Math.max(width / studyBase.width, height / studyBase.height);
+    const boundsW = Math.max(1, hotspotBounds.right - hotspotBounds.left);
+    const boundsH = Math.max(1, hotspotBounds.bottom - hotspotBounds.top);
     const fitHotspots = Math.min(
-      (width - 2 * desktopInsets.side) / (hotspotBounds.right - hotspotBounds.left),
-      (height - desktopInsets.top - desktopInsets.bottom) / (hotspotBounds.bottom - hotspotBounds.top),
+      (width - 2 * desktopInsets.side) / boundsW,
+      (height - desktopInsets.top - desktopInsets.bottom) / boundsH,
     );
     scale = Math.min(cover, Math.max(0.1, fitHotspots));
   }

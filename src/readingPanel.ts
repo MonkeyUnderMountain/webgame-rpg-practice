@@ -60,6 +60,20 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
       showSection(id);
     });
   }
+  for (const paper of document.querySelectorAll<HTMLButtonElement>('button[data-notice-text]')) {
+    paper.addEventListener('click', () => {
+      const title = document.createElement('h2');
+      title.id = 'section-title';
+      title.textContent = paper.getAttribute('aria-label');
+      const text = document.createElement('p');
+      text.className = 'notice-text';
+      text.textContent = paper.dataset.noticeText ?? '';
+      body.replaceChildren(title, text);
+      if (!dialog.open) dialog.showModal();
+      sheet.scrollTop = 0;
+      markCurrentSection();
+    });
+  }
   window.addEventListener('hashchange', syncWithLocation);
   window.addEventListener('popstate', syncWithLocation);
 
