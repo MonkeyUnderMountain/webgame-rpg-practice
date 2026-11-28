@@ -92,6 +92,11 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
     if (dialog.open) return;
     if (sectionFromHash()) history.replaceState(null, '', `${location.pathname}${location.search}`);
     markCurrentSection();
+    // 浏览器会把焦点还给场景热点；鼠标用户不需要让悬停标签一直停留。
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && active.closest('#study-art')) active.blur();
+    }, 0);
   });
 
   syncWithLocation();

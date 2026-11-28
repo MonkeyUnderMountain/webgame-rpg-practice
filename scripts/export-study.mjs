@@ -1,36 +1,14 @@
 // scripts/export-study.mjs
-// 调用本机 Aseprite CLI，从指定房间的主工程导出底图、零件和场景清单。
+// 调用本机 Aseprite CLI，从书房主工程导出底图、零件和场景清单。
 import { existsSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const ROOMS = {
-  mage: {
-    master: 'artwork/study/study-master.aseprite',
-    outDir: 'public/art/study/mage',
-    initScript: 'scripts/init-study-master.lua',
-  },
-  side: {
-    master: 'artwork/study/side-view/study-side-master.aseprite',
-    outDir: 'public/art/study/side',
-    initScript: 'scripts/init-side-master.lua',
-  },
+const room = {
+  master: 'artwork/study/room/study-master.aseprite',
+  outDir: 'public/art/study',
+  initScript: 'scripts/init-study-master.lua',
 };
-
-function parseRoomArg(argv) {
-  const inline = argv.find((arg) => arg.startsWith('--room='));
-  if (inline) return inline.slice('--room='.length);
-  const idx = argv.indexOf('--room');
-  if (idx >= 0 && argv[idx + 1]) return argv[idx + 1];
-  return process.env.STUDY_ROOM || 'mage';
-}
-
-const roomId = parseRoomArg(process.argv.slice(2));
-const room = ROOMS[roomId];
-if (!room) {
-  console.error(`Unknown room "${roomId}". Expected one of: ${Object.keys(ROOMS).join(', ')}`);
-  process.exit(1);
-}
 
 const root = process.cwd();
 const masterFile = resolve(root, room.master);
@@ -60,9 +38,9 @@ if (!asepriteBin) {
 
 function runLua(scriptRelPath) {
   const scriptPath = resolve(root, scriptRelPath);
-  const result = spawnSync(asepriteBin, ['-b', '--script-param', `room=${roomId}`, '--script', scriptPath], {
+  const result = spawnSync(asepriteBin, ['-b', '--script', scriptPath], {
     cwd: root,
-    env: { ...process.env, STUDY_ROOM: roomId },
+    env: process.env,
     encoding: 'utf-8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -75,17 +53,17 @@ function runLua(scriptRelPath) {
 
 const forceInit = process.argv.includes('--init');
 if (process.argv.includes('--repave')) {
-  if (roomId !== 'side' || !forceInit) {
-    console.error('--repave requires --room=side and --init.');
+  if (!forceInit) {
+    console.error('--repave requires --init.');
     process.exit(1);
   }
-  console.log('[side] Repaving the starter background from the flagstone tiles...');
-  runLua('scripts/pave-side-floor.lua');
+  console.log('[study] Repaving the starter background from the flagstone tiles...');
+  runLua('scripts/pave-floor.lua');
 }
 if (forceInit || !existsSync(masterFile)) {
-  console.log(`[${roomId}] Initializing ${room.master}...`);
+  console.log(`[study] Initializing ${room.master}...`);
   runLua(room.initScript);
 }
 
-console.log(`[${roomId}] Exporting layers and generating scene manifest...`);
+console.log('[study] Exporting layers and generating scene manifest...');
 runLua('scripts/export-study.lua');

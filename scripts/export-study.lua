@@ -1,6 +1,5 @@
 -- scripts/export-study.lua
--- 从指定房间的 Aseprite 主工程按整数倍导出资源，并将原画布坐标写入对应 JSON 清单。
--- 默认房间为 mage；可通过 --script-param room=side 或环境变量 STUDY_ROOM=side 切换。
+-- 从书房 Aseprite 主工程按 3× 导出资源，并将 640×360 原画布坐标写入场景清单。
 
 local rgba = app.pixelColor.rgba
 local rgbaR = app.pixelColor.rgbaR
@@ -8,11 +7,10 @@ local rgbaG = app.pixelColor.rgbaG
 local rgbaB = app.pixelColor.rgbaB
 local rgbaA = app.pixelColor.rgbaA
 
-local roomId = (app.params and app.params.room) or os.getenv("STUDY_ROOM") or "mage"
-if roomId == "" then roomId = "mage" end
+local roomId = "study"
 
 local SECTION_SPECS = {
-  { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = true,  outline = "all",     color = { 58, 215, 255 } },
+  { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = false, outline = "all",     color = { 58, 215, 255 } },
   { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = true,  outline = "all",     color = { 89, 226, 138 } },
   { id = "profile",  label = "About",        key = 3, priority = 6, labelBelow = false, outline = "all",     color = { 255, 210, 122 } },
   { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = true,  outline = "largest", color = { 255, 154, 120 } },
@@ -20,307 +18,165 @@ local SECTION_SPECS = {
   { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = true,  outline = "all",     color = { 255, 122, 168 } },
 }
 
-local ROOM_CONFIGS = {
-  mage = {
-    exportScale = 2,
-    masterPath = "artwork/study/study-master.aseprite",
-    outDir = "public/art/study/mage/",
-    artBase = "art/study/mage/",
-    manifestPath = "src/study-scene.json",
-    props = {
-      {
-        id = "chalkboard-diagram",
-        label = "Chalkboard Diagram",
-        zIndex = 2,
-        interactive = false,
-        defaultState = "diagram_1",
-        states = {
-          { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png", caption = "I · Projective Geometry" },
-          { id = "diagram_2", layer = "prop_chalkboard_d2", file = "chalkboard-d2.png", caption = "II · Snake Lemma & Pullback" },
-          { id = "diagram_3", layer = "prop_chalkboard_d3", file = "chalkboard-d3.png", caption = "III · Torus & Trefoil Knot" },
-        },
-      },
-      {
-        id = "chalk-tray",
-        label = "Chalk · Redraw Board",
-        zIndex = 4,
-        interactive = true,
-        priority = 12,
-        labelBelow = true,
-        outline = "all",
-        action = {
-          type = "cycle-target",
-          targetProp = "chalkboard-diagram",
-          storageKey = "study:chalkboard-diagram",
-        },
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_chalk_tray", file = "chalk-tray.png" },
-        },
-      },
-      {
-        id = "candle-column",
-        label = "Pillar Candle",
-        zIndex = 3,
-        interactive = true,
-        priority = 13,
-        labelBelow = true,
-        outline = "all",
-        action = {
-          type = "toggle-state",
-          fxSelector = ".fx-candle-column",
-          storageKey = "study:candle-column",
-        },
-        defaultState = "lit",
-        states = {
-          { id = "lit",   layer = "prop_candle_column_lit",   file = "candle-column-lit.png",   fxActive = true },
-          { id = "unlit", layer = "prop_candle_column_unlit", file = "candle-column-unlit.png", fxActive = false },
-        },
-      },
-      {
-        id = "candle-desk",
-        label = "Desk Candle",
-        zIndex = 3,
-        interactive = true,
-        priority = 14,
-        labelBelow = false,
-        outline = "all",
-        action = {
-          type = "toggle-state",
-          fxSelector = ".fx-candle-desk",
-          storageKey = "study:candle-desk",
-        },
-        defaultState = "lit",
-        states = {
-          { id = "lit",   layer = "prop_candle_desk_lit",   file = "candle-desk-lit.png",   fxActive = true },
-          { id = "unlit", layer = "prop_candle_desk_unlit", file = "candle-desk-unlit.png", fxActive = false },
-        },
-      },
-      {
-        id = "candle-bench",
-        label = "Window Candle",
-        zIndex = 3,
-        interactive = true,
-        priority = 15,
-        labelBelow = false,
-        outline = "all",
-        action = {
-          type = "toggle-state",
-          fxSelector = ".fx-candle-bench",
-          storageKey = "study:candle-bench",
-        },
-        defaultState = "lit",
-        states = {
-          { id = "lit",   layer = "prop_candle_bench_lit",   file = "candle-bench-lit.png",   fxActive = true },
-          { id = "unlit", layer = "prop_candle_bench_unlit", file = "candle-bench-unlit.png", fxActive = false },
-        },
+local room = {
+  exportScale = 3,
+  masterPath = "artwork/study/room/study-master.aseprite",
+  outDir = "public/art/study/",
+  artBase = "art/study/",
+  manifestPath = "src/study-scene.json",
+  props = {
+    {
+      id = "floor-shade",
+      label = "Floor Shade",
+      zIndex = 0,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_floor_shade", file = "floor-shade.png" },
       },
     },
-  },
-  side = {
-    exportScale = 3,
-    masterPath = "artwork/study/side-view/study-side-master.aseprite",
-    outDir = "public/art/study/side/",
-    artBase = "art/study/side/",
-    manifestPath = "src/study-side-scene.json",
-    props = {
-      {
-        id = "floor-shade",
-        label = "Floor Shade",
-        zIndex = 0,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_floor_shade", file = "floor-shade.png" },
-        },
+    {
+      id = "wall-lamp-glow",
+      label = "Lantern Glow",
+      zIndex = 0,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_wall_lamp_glow", file = "wall-lamp-glow.png" },
       },
-      {
-        id = "wall-lamp-glow",
-        label = "Lantern Glow",
-        zIndex = 0,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_wall_lamp_glow", file = "wall-lamp-glow.png" },
-        },
+    },
+    {
+      id = "window-light",
+      label = "Window Light",
+      zIndex = 0,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_window_light", file = "window-light.png" },
       },
-      {
-        id = "window-light",
-        label = "Window Light",
-        zIndex = 0,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_window_light", file = "window-light.png" },
-        },
+    },
+    {
+      id = "window-view",
+      label = "Window View",
+      zIndex = 0,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_window_view", file = "window-view.png" },
       },
-      {
-        id = "window-view",
-        label = "Window View",
-        zIndex = 0,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_window_view", file = "window-view.png" },
-        },
+    },
+    {
+      id = "window-frame",
+      label = "Arched Window",
+      zIndex = 1,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_window_frame", file = "window-frame.png" },
       },
-      {
-        id = "window-frame",
-        label = "Arched Window",
-        zIndex = 1,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_window_frame", file = "window-frame.png" },
-        },
+    },
+    {
+      id = "door",
+      label = "Door",
+      zIndex = 2,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_door", file = "door.png" },
       },
-      {
-        id = "door",
-        label = "Door",
-        zIndex = 2,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_door", file = "door.png" },
-        },
+    },
+    {
+      id = "chalkboard-frame",
+      label = "Chalkboard Frame",
+      zIndex = 2,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_chalkboard_frame", file = "chalkboard-frame.png" },
       },
-      {
-        id = "chalkboard-frame",
-        label = "Chalkboard Frame",
-        zIndex = 2,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_chalkboard_frame", file = "chalkboard-frame.png" },
-        },
+    },
+    {
+      id = "desk",
+      label = "Desk",
+      zIndex = 2,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_desk", file = "desk.png" },
       },
-      {
-        id = "desk",
-        label = "Desk",
-        zIndex = 2,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_desk", file = "desk.png" },
-        },
+    },
+    {
+      id = "computer",
+      label = "Computer",
+      zIndex = 3,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_computer", file = "computer.png" },
       },
-      {
-        id = "computer",
-        label = "Computer",
-        zIndex = 3,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_computer", file = "computer.png" },
-        },
+    },
+    {
+      id = "book",
+      label = "Open Book",
+      zIndex = 3,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_book", file = "book.png" },
       },
-      {
-        id = "book",
-        label = "Open Book",
-        zIndex = 3,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_book", file = "book.png" },
-        },
+    },
+    {
+      id = "desk-chair",
+      label = "Desk Chair",
+      zIndex = 4,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_desk_chair", file = "desk-chair.png" },
       },
-      {
-        id = "desk-chair",
-        label = "Desk Chair",
-        zIndex = 4,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_desk_chair", file = "desk-chair.png" },
-        },
+    },
+    {
+      id = "bookcase",
+      label = "Bookcase",
+      zIndex = 2,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_bookcase", file = "bookcase.png" },
       },
-      {
-        id = "bookcase",
-        label = "Bookcase",
-        zIndex = 2,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_bookcase", file = "bookcase.png" },
-        },
+    },
+    {
+      id = "chalkboard-diagram",
+      label = "Chalkboard Diagram",
+      zIndex = 3,
+      interactive = false,
+      defaultState = "diagram_1",
+      states = {
+        { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png" },
       },
-      {
-        id = "chalkboard-diagram",
-        label = "Chalkboard Diagram",
-        zIndex = 3,
-        interactive = false,
-        defaultState = "diagram_1",
-        states = {
-          { id = "diagram_1", layer = "prop_chalkboard_d1", file = "chalkboard-d1.png", caption = "I · Thales' Theorem" },
-          { id = "diagram_2", layer = "prop_chalkboard_d2", file = "chalkboard-d2.png", caption = "II · Commutative Diagram", optional = true },
-          { id = "diagram_3", layer = "prop_chalkboard_d3", file = "chalkboard-d3.png", caption = "III · Dynamics Orbit", optional = true },
-        },
+    },
+    {
+      id = "wall-lamp",
+      label = "Wall Lantern",
+      zIndex = 3,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_wall_lamp", file = "wall-lamp.png", durationMs = 240 },
       },
-      {
-        id = "chalk-tray",
-        label = "Chalk · Redraw Board",
-        zIndex = 4,
-        interactive = true,
-        priority = 12,
-        labelBelow = true,
-        outline = "all",
-        action = {
-          type = "cycle-target",
-          targetProp = "chalkboard-diagram",
-          storageKey = "study:side:chalkboard-diagram",
-        },
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_chalk_tray", file = "chalk-tray.png" },
-        },
-      },
-      {
-        id = "wall-lamp",
-        label = "Wall Lantern",
-        zIndex = 3,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_wall_lamp", file = "wall-lamp.png", durationMs = 240 },
-        },
-      },
-      {
-        id = "candle-desk",
-        label = "Desk Candle",
-        zIndex = 3,
-        interactive = true,
-        priority = 14,
-        labelBelow = false,
-        outline = "all",
-        action = {
-          type = "toggle-state",
-          fxSelector = ".fx-candle-desk",
-          storageKey = "study:side:candle-desk",
-        },
-        defaultState = "lit",
-        states = {
-          { id = "lit",   layer = "prop_candle_desk_lit",   file = "candle-desk-lit.png",   fxActive = true },
-          { id = "unlit", layer = "prop_candle_desk_unlit", file = "candle-desk-unlit.png", fxActive = false },
-        },
-      },
-      {
-        id = "monitor-pulse",
-        label = "Monitor Pulse",
-        zIndex = 4,
-        interactive = false,
-        defaultState = "default",
-        states = {
-          { id = "default", layer = "prop_monitor_pulse", file = "monitor-pulse.png", durationMs = 900 },
-        },
+    },
+    {
+      id = "monitor-pulse",
+      label = "Monitor Pulse",
+      zIndex = 4,
+      interactive = false,
+      defaultState = "default",
+      states = {
+        { id = "default", layer = "prop_monitor_pulse", file = "monitor-pulse.png", durationMs = 900 },
       },
     },
   },
 }
-
-local room = ROOM_CONFIGS[roomId]
-if not room then
-  error("Unknown room in export-study.lua: " .. tostring(roomId))
-end
 
 local spr = app.open(room.masterPath)
 app.activeSprite = spr
@@ -581,7 +437,7 @@ end
 local function discoverCustomPropLayers(layers)
   for _, layer in ipairs(layers) do
     if layer.isGroup then
-      if roomId == "side" and layer.name == "35_notice_papers" then
+      if layer.name == "35_notice_papers" then
         collectNoticePapers(layer)
       elseif not knownLayers[layer.name] then
         discoverCustomPropLayers(layer.layers)
@@ -641,8 +497,6 @@ for _, prop in ipairs(PROP_SPECS) do
           src = relFile,
           frames = frames,
           frameDurationMs = st.durationMs or frameDurationMs,
-          fxActive = st.fxActive,
-          caption = st.caption,
         })
       end
       table.insert(exportedProps, {
@@ -705,12 +559,12 @@ local function toJson(val, indent, keyName)
       return "[\n" .. table.concat(items, ",\n") .. "\n" .. pad .. "]"
     else
       local keyOrder = {
-        "roomId", "artBase", "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
+        "artBase", "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
         "background", "hotspotMask", "sections", "props",
         "id", "label", "key", "color", "x", "y", "width", "height", "zIndex",
         "interactive", "priority", "labelBelow", "outline",
-        "action", "type", "targetProp", "fxSelector", "storageKey",
-        "defaultState", "states", "src", "frames", "frameDurationMs", "fxActive", "caption",
+        "action", "type", "text",
+        "defaultState", "states", "src", "frames", "frameDurationMs",
       }
       local seen = {}
       local keys = {}
@@ -736,7 +590,6 @@ local function toJson(val, indent, keyName)
 end
 
 local manifest = {
-  roomId = roomId,
   artBase = room.artBase,
   baseWidth = baseW,
   baseHeight = baseH,

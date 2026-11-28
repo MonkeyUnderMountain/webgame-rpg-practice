@@ -1,9 +1,8 @@
 {
-  "roomId": "mage",
-  "artBase": "art/study/mage/",
-  "baseWidth": 960,
-  "baseHeight": 540,
-  "exportScale": 2,
+  "artBase": "art/study/",
+  "baseWidth": 640,
+  "baseHeight": 360,
+  "exportScale": 3,
   "exportWidth": 1920,
   "exportHeight": 1080,
   "background": "study.png",
@@ -14,12 +13,12 @@
       "label": "News",
       "key": 1,
       "color": [58, 215, 255],
-      "x": 4,
-      "y": 71,
-      "width": 119,
-      "height": 180,
+      "x": 349,
+      "y": 84,
+      "width": 37,
+      "height": 75,
       "priority": 2,
-      "labelBelow": true,
+      "labelBelow": false,
       "outline": "all"
     },
     {
@@ -27,10 +26,10 @@
       "label": "Research",
       "key": 2,
       "color": [89, 226, 138],
-      "x": 200,
-      "y": 45,
-      "width": 207,
-      "height": 209,
+      "x": 132,
+      "y": 76,
+      "width": 206,
+      "height": 128,
       "priority": 3,
       "labelBelow": true,
       "outline": "all"
@@ -40,10 +39,10 @@
       "label": "About",
       "key": 3,
       "color": [255, 210, 122],
-      "x": 35,
-      "y": 271,
-      "width": 505,
-      "height": 269,
+      "x": 338,
+      "y": 216,
+      "width": 200,
+      "height": 84,
       "priority": 6,
       "labelBelow": false,
       "outline": "all"
@@ -53,10 +52,10 @@
       "label": "Notes",
       "key": 4,
       "color": [255, 154, 120],
-      "x": 431,
-      "y": 13,
-      "width": 183,
-      "height": 369,
+      "x": 545,
+      "y": 74,
+      "width": 85,
+      "height": 211,
       "priority": 4,
       "labelBelow": true,
       "outline": "largest"
@@ -66,10 +65,10 @@
       "label": "Side Quests",
       "key": 5,
       "color": [214, 140, 255],
-      "x": 554,
-      "y": 290,
-      "width": 222,
-      "height": 140,
+      "x": 285,
+      "y": 241,
+      "width": 53,
+      "height": 47,
       "priority": 5,
       "labelBelow": false,
       "outline": "all"
@@ -79,10 +78,10 @@
       "label": "Look outside",
       "key": 6,
       "color": [255, 122, 168],
-      "x": 774,
-      "y": 76,
-      "width": 176,
-      "height": 356,
+      "x": 4,
+      "y": 66,
+      "width": 104,
+      "height": 212,
       "priority": 1,
       "labelBelow": true,
       "outline": "all"
@@ -90,13 +89,241 @@
   ],
   "props": [
     {
+      "id": "floor-shade",
+      "label": "Floor Shade",
+      "x": 0,
+      "y": 277,
+      "width": 640,
+      "height": 60,
+      "zIndex": 0,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/floor-shade.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "wall-lamp-glow",
+      "label": "Lantern Glow",
+      "x": 75,
+      "y": 79,
+      "width": 93,
+      "height": 231,
+      "zIndex": 0,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/wall-lamp-glow.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "window-light",
+      "label": "Window Light",
+      "x": 456,
+      "y": 284,
+      "width": 130,
+      "height": 21,
+      "zIndex": 0,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/window-light.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "window-view",
+      "label": "Window View",
+      "x": 418,
+      "y": 24,
+      "width": 89,
+      "height": 170,
+      "zIndex": 0,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/window-view.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "window-frame",
+      "label": "Arched Window",
+      "x": 399,
+      "y": 5,
+      "width": 128,
+      "height": 203,
+      "zIndex": 1,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/window-frame.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "door",
+      "label": "Door",
+      "x": 4,
+      "y": 66,
+      "width": 104,
+      "height": 212,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/door.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "chalkboard-frame",
+      "label": "Chalkboard Frame",
+      "x": 132,
+      "y": 76,
+      "width": 206,
+      "height": 128,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/chalkboard-frame.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "desk",
+      "label": "Desk",
+      "x": 338,
+      "y": 216,
+      "width": 200,
+      "height": 77,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/desk.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "computer",
+      "label": "Computer",
+      "x": 362,
+      "y": 173,
+      "width": 74,
+      "height": 58,
+      "zIndex": 3,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/computer.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "book",
+      "label": "Open Book",
+      "x": 456,
+      "y": 214,
+      "width": 55,
+      "height": 18,
+      "zIndex": 3,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/book.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "desk-chair",
+      "label": "Desk Chair",
+      "x": 365,
+      "y": 216,
+      "width": 69,
+      "height": 84,
+      "zIndex": 4,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/desk-chair.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "bookcase",
+      "label": "Bookcase",
+      "x": 545,
+      "y": 74,
+      "width": 85,
+      "height": 211,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/bookcase.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
       "id": "chalkboard-diagram",
       "label": "Chalkboard Diagram",
-      "x": 219,
-      "y": 58,
-      "width": 166,
-      "height": 166,
-      "zIndex": 2,
+      "x": 164,
+      "y": 97,
+      "width": 119,
+      "height": 72,
+      "zIndex": 3,
       "interactive": false,
       "defaultState": "diagram_1",
       "states": [
@@ -104,154 +331,158 @@
           "id": "diagram_1",
           "src": "props/chalkboard-d1.png",
           "frames": 1,
-          "frameDurationMs": 180,
-          "caption": "I · Projective Geometry"
-        },
-        {
-          "id": "diagram_2",
-          "src": "props/chalkboard-d2.png",
-          "frames": 1,
-          "frameDurationMs": 180,
-          "caption": "II · Snake Lemma & Pullback"
-        },
-        {
-          "id": "diagram_3",
-          "src": "props/chalkboard-d3.png",
-          "frames": 1,
-          "frameDurationMs": 180,
-          "caption": "III · Torus & Trefoil Knot"
+          "frameDurationMs": 180
         }
       ]
     },
     {
-      "id": "chalk-tray",
-      "label": "Chalk · Redraw Board",
-      "x": 238,
-      "y": 235,
-      "width": 121,
-      "height": 13,
-      "zIndex": 4,
-      "interactive": true,
-      "priority": 12,
-      "labelBelow": true,
-      "outline": "all",
-      "action": {
-        "type": "cycle-target",
-        "targetProp": "chalkboard-diagram",
-        "storageKey": "study:chalkboard-diagram"
-      },
+      "id": "wall-lamp",
+      "label": "Wall Lantern",
+      "x": 114,
+      "y": 103,
+      "width": 11,
+      "height": 39,
+      "zIndex": 3,
+      "interactive": false,
       "defaultState": "default",
       "states": [
         {
           "id": "default",
-          "src": "props/chalk-tray.png",
+          "src": "props/wall-lamp.png",
+          "frames": 4,
+          "frameDurationMs": 240
+        }
+      ]
+    },
+    {
+      "id": "monitor-pulse",
+      "label": "Monitor Pulse",
+      "x": 369,
+      "y": 184,
+      "width": 50,
+      "height": 19,
+      "zIndex": 4,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/monitor-pulse.png",
+          "frames": 4,
+          "frameDurationMs": 900
+        }
+      ]
+    },
+    {
+      "id": "noticeboard",
+      "label": "noticeboard",
+      "x": 349,
+      "y": 84,
+      "width": 37,
+      "height": 75,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/noticeboard.png",
           "frames": 1,
           "frameDurationMs": 180
         }
       ]
     },
     {
-      "id": "candle-column",
-      "label": "Pillar Candle",
-      "x": 162,
-      "y": 106,
-      "width": 21,
-      "height": 48,
-      "zIndex": 3,
-      "interactive": true,
-      "priority": 13,
-      "labelBelow": true,
-      "outline": "all",
-      "action": {
-        "type": "toggle-state",
-        "fxSelector": ".fx-candle-column",
-        "storageKey": "study:candle-column"
-      },
-      "defaultState": "lit",
+      "id": "supply-box",
+      "label": "supply-box",
+      "x": 285,
+      "y": 241,
+      "width": 53,
+      "height": 47,
+      "zIndex": 2,
+      "interactive": false,
+      "defaultState": "default",
       "states": [
         {
-          "id": "lit",
-          "src": "props/candle-column-lit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": true
-        },
-        {
-          "id": "unlit",
-          "src": "props/candle-column-unlit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": false
+          "id": "default",
+          "src": "props/supply-box.png",
+          "frames": 1,
+          "frameDurationMs": 180
         }
       ]
     },
     {
-      "id": "candle-desk",
-      "label": "Desk Candle",
-      "x": 335,
-      "y": 287,
-      "width": 17,
-      "height": 50,
-      "zIndex": 3,
-      "interactive": true,
-      "priority": 14,
-      "labelBelow": false,
-      "outline": "all",
-      "action": {
-        "type": "toggle-state",
-        "fxSelector": ".fx-candle-desk",
-        "storageKey": "study:candle-desk"
-      },
-      "defaultState": "lit",
-      "states": [
-        {
-          "id": "lit",
-          "src": "props/candle-desk-lit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": true
-        },
-        {
-          "id": "unlit",
-          "src": "props/candle-desk-unlit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": false
-        }
-      ]
-    },
-    {
-      "id": "candle-bench",
-      "label": "Window Candle",
-      "x": 741,
-      "y": 296,
-      "width": 16,
-      "height": 40,
-      "zIndex": 3,
+      "id": "notice-paper-1",
+      "label": "On the board",
+      "x": 355,
+      "y": 93,
+      "width": 14,
+      "height": 13,
+      "zIndex": 4,
       "interactive": true,
       "priority": 15,
-      "labelBelow": false,
-      "outline": "all",
+      "outline": "largest",
       "action": {
-        "type": "toggle-state",
-        "fxSelector": ".fx-candle-bench",
-        "storageKey": "study:candle-bench"
+        "type": "read-note",
+        "text": "Join either end of a diameter to a third point on the circle. The angle at that point is a right angle."
       },
-      "defaultState": "lit",
+      "defaultState": "default",
       "states": [
         {
-          "id": "lit",
-          "src": "props/candle-bench-lit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": true
-        },
+          "id": "default",
+          "src": "props/notice-paper-1.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "notice-paper-2",
+      "label": "Reading marker",
+      "x": 365,
+      "y": 113,
+      "width": 14,
+      "height": 13,
+      "zIndex": 4,
+      "interactive": true,
+      "priority": 15,
+      "outline": "largest",
+      "action": {
+        "type": "read-note",
+        "text": "The open book is at the triangle diagram. Compare it with the construction on the slate."
+      },
+      "defaultState": "default",
+      "states": [
         {
-          "id": "unlit",
-          "src": "props/candle-bench-unlit.png",
-          "frames": 4,
-          "frameDurationMs": 180,
-          "fxActive": false
+          "id": "default",
+          "src": "props/notice-paper-2.png",
+          "frames": 1,
+          "frameDurationMs": 180
+        }
+      ]
+    },
+    {
+      "id": "notice-paper-3",
+      "label": "Spare supplies",
+      "x": 356,
+      "y": 134,
+      "width": 14,
+      "height": 13,
+      "zIndex": 4,
+      "interactive": true,
+      "priority": 15,
+      "outline": "largest",
+      "action": {
+        "type": "read-note",
+        "text": "Find the rolled plans, file folder and spare cable in the box beside the desk."
+      },
+      "defaultState": "default",
+      "states": [
+        {
+          "id": "default",
+          "src": "props/notice-paper-3.png",
+          "frames": 1,
+          "frameDurationMs": 180
         }
       ]
     }

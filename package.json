@@ -9,8 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "art:export": "node scripts/export-study.mjs",
     "art:init": "node scripts/export-study.mjs --init",
-    "art:side:export": "node scripts/export-study.mjs --room=side",
-    "art:side:init": "node scripts/export-study.mjs --room=side --init"
+    "art:repave": "node scripts/export-study.mjs --init --repave"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "^5.3.0",

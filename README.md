@@ -1,8 +1,19 @@
 # Tianle Yang · The Study
 
-An illustrated pixel-art academic homepage for Tianle Yang, built on a **960×540** layered Aseprite scene (exported at **2× / 1920×1080**).
+An illustrated pixel-art academic homepage for Tianle Yang, built on a single **640×360** layered Aseprite room and exported at **3× / 1920×1080**.
 
-Click the main objects in the study—the noticeboard, chalkboard, desk, bookshelf, bench, or door—to unroll parchment scrolls with notes, research, and a glimpse outside. You can also interact with objects right inside the room: click the three candles to light or extinguish them, or click the chalk tray along the bottom of the chalkboard to redraw the mathematical diagrams on the wall.
+The room is the site's only scene. Six hotspots connect the furniture to the homepage:
+
+| Section | Object |
+| --- | --- |
+| **News** | cork noticeboard |
+| **Research** | chalkboard |
+| **About** | desk + chair workspace |
+| **Notes** | bookcase |
+| **Side quests** | supply box beside the desk |
+| **Look outside** | wooden door |
+
+The three pinned notes on the noticeboard are still individually readable; clicking the cork board itself opens **News**.
 
 ## Run locally
 
@@ -14,31 +25,25 @@ npm.cmd run dev
 ```
 
 Open the local address Vite prints. In the study:
-- Hover or click any object, or navigate with **Tab** and **Enter** / **Space**.
+
+- Hover or click any of the six objects, or navigate with **Tab** and **Enter** / **Space**.
+- Click a pinned note to read its short text; click the surrounding board for **News**.
 - Press **Esc** or click outside a scroll to close it.
-- Append `?debug=hotspots` to the URL to inspect the 960×540 pixel hit mask and Marching Squares golden contours.
+- Append `?debug=hotspots` to the URL to inspect the 640×360 pixel hit mask and Marching Squares golden contours.
 
-## Side-view study (640×360)
+## Edit the room
 
-Open `/?room=side` for the **640×360**, 23-color pixel room. Edit its background, props and hotspots on the same grid in the [Aseprite master](artwork/study/side-view/study-side-master.aseprite). In **Room style**, choose **Original tiled room · 960×540** (`/?room=side&style=tiled-960`) to compare the previous background, or select the [furnished reference](artwork/study/side-view/reference.jpg).
+The editable master is [`artwork/study/room/study-master.aseprite`](artwork/study/room/study-master.aseprite). It is rebuilt from [`room-base.png`](artwork/study/room/room-base.png), the native-size [props](artwork/study/room/props/), and the [furnished reference](artwork/study/references/reference.jpg) by [`scripts/init-study-master.lua`](scripts/init-study-master.lua).
 
-After editing layers in the side-view Aseprite master, run:
+Layer groups:
 
-```powershell
-npm.cmd run art:side:export
-```
-
-This exports the background and nonempty props at `3×`, keeps `hotspots.png` at `640×360`, and regenerates [`src/study-side-scene.json`](src/study-side-scene.json). `npm.cmd run art:side:init` recreates the master from the [pixel background](artwork/study/side-view/variants/study-side-view-pixel-640.png) and [native-size props](artwork/study/side-view/props/), with the furnished reference on a hidden layer. Edit `prop_window_view` to change the landscape. The walnut desk, computer and open book are separate layers; hide `prop_computer` and `prop_book` to see the bare tabletop.
-
-To rearrange the bookcase, expand `20_furniture/prop_bookcase` in the master. Each of its four shelves has a board and movable book groups built from the same [upright, leaning and stacked books](artwork/study/side-view/props/bookcase/). The whole cabinet exports as one `props/bookcase.png`.
-
-The graphite chair (`20_furniture/prop_desk_chair`) carries its own contact shadow. The sunlight cast through the two arched panes is a separate transparent floor layer (`05_floor_light/prop_window_light`), beneath the furniture. A cool ambient wash (`prop_floor_shade`) and the door-side lantern glow (`prop_wall_lamp_glow`) sit under it. The lantern itself uses four flame frames; the monitor has a four-frame `prop_monitor_pulse` dot. Per-state `durationMs` in [`scripts/export-study.lua`](scripts/export-study.lua) sets their animation speed.
-
-The floor uses [four editable flagstones](artwork/study/side-view/tiles/warm-flagstones.png), each 56×16 pixels. Paint on the indexed sheet with the warm-grey ramp (palette indices 8–15). `npm.cmd run art:side:init -- --repave` tiles the starter background in six staggered rows, then rebuilds the master from source and exports it. For edits made directly in the master, use `art:side:export` instead. The [AI mood reference](artwork/study/side-view/variants/study-side-view-ai-reference.jpg) is a lighting/colour study generated from the current room and the furnished reference; it is not loaded by the game.
-
-## Edit pixel art & modular props
-
-The interactive homepage at `/` uses a separate **960×540** Aseprite master: [`artwork/study/study-master.aseprite`](artwork/study/study-master.aseprite). It contains the room layers, replaceable props, 4-frame animations and base hotspot mask.
+- `00_room_base` — wall, window opening, floor and wall foot.
+- `05_floor_light` — cool floor shade, lantern glow and window light, beneath the furniture.
+- `10_beyond` / `20_furniture` — window view, frame, door, chalkboard, desk, computer, book, chair and bookcase.
+- `30_chalkboard` — the chalk diagram.
+- `35_notice_papers` — three pinned notes; layer name is the title, **User Data** is the text.
+- `40_lights_and_screens` — four-frame lantern flame and monitor pulse.
+- `99_hotspot_mask` — hidden 640×360 six-colour mask; its colours must match `SECTION_SPECS` in [`scripts/export-study.lua`](scripts/export-study.lua).
 
 After editing layers in Aseprite, run:
 
@@ -46,7 +51,37 @@ After editing layers in Aseprite, run:
 npm.cmd run art:export
 ```
 
-This invokes Aseprite CLI ([`scripts/export-study.mjs`](scripts/export-study.mjs)) to export the `2×` (`1920×1080`) room base, trim and export all static/animated prop sprites to `public/art/study/mage/props/`, and regenerate [`src/study-scene.json`](src/study-scene.json).
+This invokes Aseprite CLI ([`scripts/export-study.mjs`](scripts/export-study.mjs)) to export the 3× room base, trim and export all static/animated props to `public/art/study/props/`, keep `hotspots.png` at 640×360, and regenerate [`src/study-scene.json`](src/study-scene.json).
+
+To rebuild the master from source, run:
+
+```powershell
+npm.cmd run art:init
+```
+
+`npm.cmd run art:repave` re-lays the floor from the wide-slab sheet before rebuilding. Use `art:export` for edits made directly in the master; `art:init` overwrites the master from the source assets.
+
+To rearrange the bookcase, expand `20_furniture/prop_bookcase`. Each of its four shelves has a board and movable book groups built from the same [upright, leaning and stacked books](artwork/study/room/props/bookcase/). The whole cabinet exports as one `props/bookcase.png`; the brass tetrahedron lives in `shelf_3`.
+
+The lantern housing is stationary and only the four flame frames move. Its wall glow and floor pool are separate static layers. The monitor dot is a four-frame strip; per-state `durationMs` in [`scripts/export-study.lua`](scripts/export-study.lua) sets the lantern to 240 ms per frame and the monitor to 900 ms per frame.
+
+The floor uses [six wide slabs](artwork/study/room/tiles/large-flagstones.png), each 112×24 pixels, laid in four staggered courses. Paint on the indexed sheet with the warm-grey ramp (palette indices 8–15). The [AI mood reference](artwork/study/references/ai-mood.jpg) is a lighting/colour study generated from the room and the furnished reference; it is not loaded by the game.
+
+## Edit the section content
+
+The five written sections are plain HTML in [`content/home/`](content/home/):
+
+| Section | File |
+| --- | --- |
+| About | [`profile.html`](content/home/profile.html) |
+| Notes | [`notes.html`](content/home/notes.html) |
+| News | [`news.html`](content/home/news.html) |
+| Research | [`research.html`](content/home/research.html) |
+| Side quests | [`quests.html`](content/home/quests.html) |
+
+Edit the HTML, then refresh the page and check the matching object, the top navigation, and the `#profile` / `#notes` / `#news` / `#research` / `#quests` URL anchors.
+
+The door scroll uses [`public/art/study/outside.svg`](public/art/study/outside.svg). Replace that file or update the `<img>` in the `#door-dialog` block of [`index.html`](index.html).
 
 ## Build for production
 
@@ -54,19 +89,19 @@ This invokes Aseprite CLI ([`scripts/export-study.mjs`](scripts/export-study.mjs
 npm.cmd run build
 ```
 
-This type-checks the TypeScript source and builds the root-domain static site into `dist/`.
+This type-checks the TypeScript source and builds the static site into `dist/`.
 
 ## Project layout
 
 | Path | Contents |
 | --- | --- |
-| `artwork/study/` | Interactive Aseprite master and its source room and hotspot images |
-| [`artwork/study/side-view/`](artwork/study/side-view/) | `reference.jpg` is the chosen layout; `variants/` holds the seven alternative previews |
-| [`artwork/study/archive/`](artwork/study/archive/) | Early concepts, pixel tests, shell staging, side-view studies and wall-lamp trials, grouped by topic. The [hand-traced 320×180 project](artwork/study/archive/perspective-tracing/study-v3-trace-320.aseprite) is kept with its guides and previews. |
-| `scripts/` | Aseprite export and initialization scripts, and the local ComfyUI pixel-art experiment |
-| `index.html`, `src/` | Layered scene runtime, Alpha-channel contour tracing, parchment scroll panels, and music control |
-| `content/home/` | Editable HTML for the five homepage sections (`profile`, `notes`, `news`, `research`, `quests`) |
-| `public/` | Exported runtime artwork (`study.png`, `props/*.png`), `hotspots.png`, `beyond.svg`, and audio |
+| [`artwork/study/room/`](artwork/study/room/) | Aseprite master, 640×360 base, native props and floor tiles |
+| [`artwork/study/references/`](artwork/study/references/) | Furnished stone-room reference and AI lighting study |
+| [`artwork/study/archive/`](artwork/study/archive/) | Retained early concepts, pixel tests and the [hand-traced 320×180 project](artwork/study/archive/perspective-tracing/study-v3-trace-320.aseprite) |
+| `public/art/study/` | Runtime `study.png`, `hotspots.png`, `props/*.png` and `outside.svg` |
+| `scripts/` | Aseprite initialization, floor paving and export scripts |
+| `src/` | Scene runtime, hit-mask tracing, parchment panels and music control |
+| `content/home/` | Editable HTML for the five written sections |
 | `docs/` | [Architecture walkthrough](docs/ARCHITECTURE.md) and [editing guide](docs/EDITING_GUIDE.md) |
 
 ## Credits

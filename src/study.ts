@@ -25,16 +25,11 @@ export type PropStateSpec = {
   src: string;
   frames: number;
   frameDurationMs: number;
-  fxActive?: boolean;
-  caption?: string;
 };
 
 export type PropActionSpec = {
-  type: 'toggle-state' | 'cycle-target' | 'read-note';
+  type: 'read-note';
   text?: string;
-  fxSelector?: string;
-  targetProp?: string;
-  storageKey?: string;
 };
 
 export type PropSpec = {
@@ -55,7 +50,6 @@ export type PropSpec = {
 };
 
 export type SceneManifest = {
-  roomId?: string;
   artBase?: string;
   baseWidth: number;
   baseHeight: number;
@@ -121,24 +115,6 @@ function idle(callback: () => void) {
   else window.setTimeout(callback, 120);
 }
 
-function readStorage(key?: string): string | null {
-  if (!key) return null;
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(key: string | undefined, value: string) {
-  if (!key) return;
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // 忽略隐私模式或禁用存储时的写入错误
-  }
-}
-
 const DEFAULT_SECTION_SPECS: Array<{ key: number; color: Rgb }> = [
   { key: 1, color: [58, 215, 255] },
   { key: 2, color: [89, 226, 138] },
@@ -148,7 +124,7 @@ const DEFAULT_SECTION_SPECS: Array<{ key: number; color: Rgb }> = [
   { key: 6, color: [255, 122, 168] },
 ];
 
-// 链接、房门与可替换像素零件叠在同一张 960×540 逻辑画布上；缩放时热点、轮廓和标签同步缩放。
+// 链接、房门与可替换像素零件叠在同一张 640×360 逻辑画布上；缩放时热点、轮廓和标签同步缩放。
 export function mountStudy(
   scene: HTMLElement,
   art: HTMLElement,
@@ -156,8 +132,7 @@ export function mountStudy(
 ) {
   const studyBase = { width: sceneData.baseWidth, height: sceneData.baseHeight };
   const studyExport = { width: sceneData.exportWidth, height: sceneData.exportHeight };
-  const roomId = sceneData.roomId ?? 'mage';
-  const artBase = sceneData.artBase ?? 'art/study/mage/';
+  const artBase = sceneData.artBase ?? 'art/study/';
   const artRoot = `${import.meta.env.BASE_URL}${artBase}`;
   const svgNs = 'http://www.w3.org/2000/svg';
 
@@ -242,44 +217,17 @@ export function mountStudy(
   });
   art.append(image);
 
-  // 模块化像素零件层（黑板可切换数学图示、4 帧跳动烛火与粉笔槽等独立 PNG 零件）
+  // 模块化像素零件层（静态家具、四帧壁灯和屏幕光点等独立 PNG 零件）
   const propsLayer = document.createElement('div');
   propsLayer.className = 'study-props';
   propsLayer.setAttribute('aria-hidden', 'true');
   art.append(propsLayer);
 
-  // 环境光效层：原法师书房使用预设烛光与星尘锚点；新侧视房间先保留干净光照，后续按零件补充。
-  const ambient = document.createElement('div');
-  ambient.className = 'study-fx';
-  ambient.setAttribute('aria-hidden', 'true');
-  if (roomId === 'mage') {
-    ambient.innerHTML = `
-      <span class="fx-glow fx-candle fx-candle-desk"></span>
-      <span class="fx-glow fx-candle fx-candle-column"></span>
-      <span class="fx-glow fx-candle fx-candle-bench"></span>
-      <span class="fx-glow fx-window"></span>
-      <span class="fx-glow fx-door"></span>
-      <span class="fx-star fx-star-1"></span>
-      <span class="fx-star fx-star-2"></span>
-      <span class="fx-star fx-star-3"></span>
-      <span class="fx-dust fx-dust-1"></span>
-      <span class="fx-dust fx-dust-2"></span>
-      <span class="fx-dust fx-dust-3"></span>
-      <span class="fx-dust fx-dust-4"></span>
-      <span class="fx-dust fx-dust-5"></span>
-    `;
-  }
-  art.append(ambient);
-
   // 挂载每个模块化零件及其状态精灵图
   type MountedProp = {
-    spec: PropSpec;
-    activeState: string;
     stateImages: Map<string, HTMLImageElement>;
-    setState: (stateId: string, persist?: boolean) => void;
   };
   const mountedProps = new Map<string, MountedProp>();
-  const captions = new Map<HotspotId, HTMLElement>();
   const anchors = new Map<HotspotId, HTMLAnchorElement | HTMLButtonElement>();
   const wrappers = new Map<HotspotId, HTMLElement>();
 
@@ -312,60 +260,11 @@ export function mountStudy(
       stateImages.set(st.id, sprite);
     }
 
-    const saved = readStorage(prop.action?.storageKey);
-    const initialState = prop.states.some((s) => s.id === saved) ? saved! : prop.defaultState;
-
-    const setState = (nextStateId: string, persist = false) => {
-      const stateSpec = prop.states.find((s) => s.id === nextStateId);
-      if (!stateSpec) return;
-      const entry = mountedProps.get(prop.id);
-      if (entry) entry.activeState = nextStateId;
-      for (const [id, img] of stateImages) {
-        img.hidden = id !== nextStateId;
-      }
-      if (prop.action?.fxSelector && stateSpec.fxActive !== undefined) {
-        const fxNode = ambient.querySelector<HTMLElement>(prop.action.fxSelector);
-        if (fxNode) fxNode.classList.toggle('is-off', !stateSpec.fxActive);
-      }
-      if (prop.action?.type === 'toggle-state') {
-        const btn = anchors.get(prop.id);
-        const cap = captions.get(prop.id);
-        const isLit = nextStateId === 'lit';
-        if (btn) btn.setAttribute('aria-pressed', String(isLit));
-        if (cap) cap.textContent = `${prop.label} · ${isLit ? 'Lit' : 'Out'}`;
-      }
-      if (persist) {
-        writeStorage(prop.action?.storageKey, nextStateId);
-      }
-    };
-
     propsLayer.append(propEl);
-    mountedProps.set(prop.id, { spec: prop, activeState: initialState, stateImages, setState });
-    setState(initialState, false);
+    mountedProps.set(prop.id, { stateImages });
   }
 
-  function syncCycleTargetCaption(prop: PropSpec) {
-    if (prop.action?.type !== 'cycle-target' || !prop.action.targetProp) return;
-    const target = mountedProps.get(prop.action.targetProp);
-    if (!target) return;
-    const activeSpec = target.spec.states.find((s) => s.id === target.activeState);
-    const cap = captions.get(prop.id);
-    if (cap && activeSpec?.caption) {
-      cap.textContent = `${prop.label} (${activeSpec.caption})`;
-    }
-  }
-
-  for (const prop of sceneProps) {
-    if (prop.action?.type === 'cycle-target' && prop.action.targetProp) {
-      const target = mountedProps.get(prop.action.targetProp);
-      const saved = readStorage(prop.action.storageKey);
-      if (target && saved && target.spec.states.some((s) => s.id === saved)) {
-        target.setState(saved, false);
-      }
-    }
-  }
-
-  // 轮廓用 SVG 路径，和 Aseprite 主工程共享 960×540 基准像素坐标。
+  // 轮廓用 SVG 路径，和 Aseprite 主工程共享 640×360 基准像素坐标。
   const outlineMap = document.createElementNS(svgNs, 'svg');
   outlineMap.setAttribute('class', 'study-outline-map');
   outlineMap.setAttribute('viewBox', `0 0 ${studyBase.width} ${studyBase.height}`);
@@ -438,43 +337,12 @@ export function mountStudy(
       hotspot.dataset.noticeText = spot.prop.action.text;
       hotspot.setAttribute('aria-haspopup', 'dialog');
       hotspot.setAttribute('aria-controls', 'section-dialog');
-    } else if (spot.kind === 'prop' && spot.prop) {
-      const { prop } = spot;
-      hotspot.addEventListener('click', (event) => {
-        event.preventDefault();
-        const mounted = mountedProps.get(prop.id);
-        if (!mounted || !prop.action) return;
-
-        if (prop.action.type === 'toggle-state' && prop.states.length >= 2) {
-          const currentIdx = prop.states.findIndex((s) => s.id === mounted.activeState);
-          const nextState = prop.states[(currentIdx + 1) % prop.states.length];
-          mounted.setState(nextState.id, true);
-        } else if (prop.action.type === 'cycle-target' && prop.action.targetProp) {
-          const target = mountedProps.get(prop.action.targetProp);
-          if (!target) return;
-          const currentIdx = target.spec.states.findIndex((s) => s.id === target.activeState);
-          const nextState = target.spec.states[(currentIdx + 1) % target.spec.states.length];
-          target.setState(nextState.id, false);
-          writeStorage(prop.action.storageKey, nextState.id);
-          syncCycleTargetCaption(prop);
-        }
-      });
     }
 
     wrap.append(hotspot, caption);
     art.append(wrap);
     anchors.set(spot.id, hotspot);
     wrappers.set(spot.id, wrap);
-    captions.set(spot.id, caption);
-  }
-
-  for (const prop of interactiveProps) {
-    const mounted = mountedProps.get(prop.id);
-    if (mounted && prop.action?.type === 'toggle-state') {
-      mounted.setState(mounted.activeState, false);
-    } else if (prop.action?.type === 'cycle-target') {
-      syncCycleTargetCaption(prop);
-    }
   }
 
   let hovered: HotspotId | undefined;
@@ -530,7 +398,7 @@ export function mountStudy(
   }
 
   // 掩膜决定鼠标命中区域和金色轮廓：
-  // 1) 主栏目从 960×540 的 hotspots.png 解码并提取完整外轮廓；
+  // 1) 主栏目从 640×360 的 hotspots.png 解码并提取完整外轮廓；
   // 2) 独立拆出的可交互零件直接读取自身 PNG 的 Alpha ≥ 16 通道自动合成命中区与 Marching Squares 金色描边。
   const contourCache = new Map<HotspotId, Contour[]>();
   const isolatedPropMasks = new Map<HotspotId, MaskData>();
