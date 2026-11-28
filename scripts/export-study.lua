@@ -560,7 +560,7 @@ local function toJson(val, indent, keyName)
     else
       local keyOrder = {
         "artBase", "baseWidth", "baseHeight", "exportScale", "exportWidth", "exportHeight",
-        "background", "hotspotMask", "sections", "props",
+        "background", "hotspotMask", "extensions", "top", "bottom", "left", "right", "side", "sections", "props",
         "id", "label", "key", "color", "x", "y", "width", "height", "zIndex",
         "interactive", "priority", "labelBelow", "outline",
         "action", "type", "text",
@@ -589,6 +589,41 @@ local function toJson(val, indent, keyName)
   return "null"
 end
 
+-- 4. 导出四周 Tiled 延展带素材（artwork/study/room/tiles/*.png -> public/art/study/tiles/*.png）
+local tileSrcDir = "artwork/study/room/tiles/"
+local tileOutDir = room.outDir .. "tiles/"
+local exportedExtensions = {}
+local EXTENSION_FILES = {
+  { key = "top",    file = "wall-tile.png" },
+  { key = "bottom", file = "floor-bottom-tile.png" },
+  { key = "left",   file = "side-left.png" },
+  { key = "right",  file = "side-right.png" },
+  { key = "side",   file = "side-strip.png" },
+}
+for _, item in ipairs(EXTENSION_FILES) do
+  local srcPath = tileSrcDir .. item.file
+  if app.fs.isFile(srcPath) then
+    local tileSpr = app.open(srcPath)
+    app.activeSprite = tileSpr
+    app.command.ChangePixelFormat{ format="rgb" }
+    local tileImg = Image(tileSpr.width, tileSpr.height, ColorMode.RGB)
+    tileImg:clear(rgba(0, 0, 0, 0))
+    if tileSpr.cels[1] then
+      tileImg:drawImage(tileSpr.cels[1].image, tileSpr.cels[1].position)
+    end
+    local outTile = scaleImageNearest(tileImg, room.exportScale)
+    outTile:saveAs(tileOutDir .. item.file)
+    exportedExtensions[item.key] = {
+      src = "tiles/" .. item.file,
+      width = tileSpr.width,
+      height = tileSpr.height,
+    }
+    print(string.format("[%s] Exported tiles/%s (%dx%d @ %dx)", roomId, item.file, tileSpr.width, tileSpr.height, room.exportScale))
+    tileSpr:close()
+  end
+end
+
+-- 5. 序列化为格式化的 JSON 写入 manifestPath
 local manifest = {
   artBase = room.artBase,
   baseWidth = baseW,
@@ -598,6 +633,7 @@ local manifest = {
   exportHeight = baseH * room.exportScale,
   background = "study.png",
   hotspotMask = "hotspots.png",
+  extensions = next(exportedExtensions) and exportedExtensions or nil,
   sections = exportedSections,
   props = exportedProps,
 }
@@ -609,7 +645,7 @@ print(string.format("[%s] Generated %s (%d section(s), %d modular prop(s)).", ro
 
 spr:close()
 
--- 5. 同步按相同倍率导出 artwork/study/ui/*.png -> public/art/study/ui/*.png
+-- 6. 同步按相同倍率导出 artwork/study/ui/*.png -> public/art/study/ui/*.png
 local uiSrcDir = "artwork/study/ui/"
 local uiOutDir = room.outDir .. "ui/"
 if app.fs.isDirectory(uiSrcDir) then
@@ -618,12 +654,14 @@ if app.fs.isDirectory(uiSrcDir) then
       local uiSpr = app.open(uiSrcDir .. file)
       app.activeSprite = uiSpr
       app.command.ChangePixelFormat{ format="rgb" }
-      local srcImg = uiSpr.cels[1] and uiSpr.cels[1].image
-      if srcImg then
-        local outImg = scaleImageNearest(srcImg, room.exportScale)
-        outImg:saveAs(uiOutDir .. file)
-        print(string.format("[ui] Exported ui/%s (%dx%d @ %dx)", file, srcImg.width, srcImg.height, room.exportScale))
+      local srcImg = Image(uiSpr.width, uiSpr.height, ColorMode.RGB)
+      srcImg:clear(rgba(0, 0, 0, 0))
+      if uiSpr.cels[1] then
+        srcImg:drawImage(uiSpr.cels[1].image, uiSpr.cels[1].position)
       end
+      local outImg = scaleImageNearest(srcImg, room.exportScale)
+      outImg:saveAs(uiOutDir .. file)
+      print(string.format("[ui] Exported ui/%s (%dx%d @ %dx)", file, uiSpr.width, uiSpr.height, room.exportScale))
       uiSpr:close()
     end
   end

@@ -65,22 +65,46 @@ noscript p { width: min(1100px, 100% - 64px); margin: 16px auto; font-size: 1.25
 }
 
 /* 书房画布外框：上下边缘加轻微暗角，提升顶栏和底栏文字可读性 */
-#study-scene { position: absolute; inset: 0; overflow: hidden; }
+#study-scene { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 #study-scene::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
   background: linear-gradient(#080b1599, transparent 28%, transparent 82%, #080b1580);
 }
 
+/* 四周同倍率 Tiled 延展带（方案 A）：铺在 #study-art 下方，非 16:9 屏幕自动补满四周 */
+.study-ext {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+  image-rendering: pixelated;
+}
+.study-ext-top { inset: 0 0 auto; }
+.study-ext-bottom {
+  inset: auto 0 0;
+  background-repeat: repeat-x;
+  background-color: #0d111b;
+}
+.study-ext-bottom::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, rgb(13 17 27 / 72%) 100%);
+}
+.study-ext-left { left: 0; background-repeat: no-repeat; background-color: #0d111b; }
+.study-ext-right { right: 0; background-repeat: no-repeat; background-color: #0d111b; }
+
 /* 640×360 逻辑画布容器：宽高和偏移由 src/study.ts 按窗口比例实时计算 */
-#study-art { position: absolute; isolation: isolate; }
+#study-art { position: absolute; z-index: 1; isolation: isolate; }
 
 /* 底图加载失败时显示的提示文字 */
 #study-art-error {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   inset: 45% 24px auto;
   text-align: center;
   font-size: 1.35rem;

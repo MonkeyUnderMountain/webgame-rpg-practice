@@ -24,6 +24,9 @@
 
 local NUM_FRAMES = 4
 local FRAME_DURATION = 0.18
+-- 去掉底部台阶后，全部家具、光影、便签与掩膜整体下移 24px，使墙脚落在 y=302，
+-- 为上方顶栏与拱窗顶腾出充足砖墙留白。
+local SHIFT_Y = 24
 
 local rgba = app.pixelColor.rgba
 local rgbaA = app.pixelColor.rgbaA
@@ -110,24 +113,24 @@ fillLinkedFrames(baseLayer, baseImg, Point(0, 0))
 local floorLight = master:newGroup()
 floorLight.name = "05_floor_light"
 -- 先铺地面冷影，再叠壁灯暖光，最后放窗光；三者都不遮住家具。
-addStaticProp(floorLight, "prop_floor_shade", "floor-shade.png", 0, 277)
-addStaticProp(floorLight, "prop_wall_lamp_glow", "wall-lamp-glow.png", 75, 79)
+addStaticProp(floorLight, "prop_floor_shade", "floor-shade.png", 0, 277 + SHIFT_Y)
+addStaticProp(floorLight, "prop_wall_lamp_glow", "wall-lamp-glow.png", 75, 79 + SHIFT_Y)
 -- 两个尖拱和顶部小窗一同投向右前方；窗台投在后沿，窗顶投在前沿。
-addStaticProp(floorLight, "prop_window_light", "window-light.png", 456, 284)
+addStaticProp(floorLight, "prop_window_light", "window-light.png", 456, 284 + SHIFT_Y)
 
 -- 2. 窗外风景层
 local beyondGroup = master:newGroup()
 beyondGroup.name = "10_beyond"
-addStaticProp(beyondGroup, "prop_window_view", "window-view.png", 418, 24)
+addStaticProp(beyondGroup, "prop_window_view", "window-view.png", 418, 24 + SHIFT_Y)
 
 -- 3. 静态家具层（便于独立调节位置、自动 Alpha 描边、补全后方砖墙）
 local furnitureGroup = master:newGroup()
 furnitureGroup.name = "20_furniture"
-addStaticProp(furnitureGroup, "prop_window_frame", "window-frame.png", 399, 5)
-addStaticProp(furnitureGroup, "prop_door", "door.png", 4, 66)
-addStaticProp(furnitureGroup, "prop_chalkboard_frame", "chalkboard-frame.png", 132, 76)
-addStaticProp(furnitureGroup, "prop_noticeboard", "noticeboard.png", 349, 84)
-addStaticProp(furnitureGroup, "prop_supply_box", "supply-box.png", 285, 240)
+addStaticProp(furnitureGroup, "prop_window_frame", "window-frame.png", 399, 5 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_door", "door.png", 4, 66 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_chalkboard_frame", "chalkboard-frame.png", 132, 76 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_noticeboard", "noticeboard.png", 349, 84 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_supply_box", "supply-box.png", 285, 240 + SHIFT_Y)
 -- 灯座不动，四帧只改火苗；墙脚与地面的暖光已单独烘焙在地光层。
 local lamp = Image{ fromFile = propDir .. "wall-lamp.png" }
 local lampFrames = {}
@@ -136,15 +139,15 @@ for i = 1, NUM_FRAMES do
   frame:drawImage(Image{ fromFile = propDir .. "wall-lamp-flame-" .. i .. ".png" }, Point(3, 10))
   lampFrames[i] = frame
 end
-addAnimatedImages(furnitureGroup, "prop_wall_lamp", lampFrames, 112, 103)
-addStaticProp(furnitureGroup, "prop_desk", "desk.png", 338, 216)
-addStaticProp(furnitureGroup, "prop_computer", "computer.png", 362, 173)
-addStaticProp(furnitureGroup, "prop_book", "book.png", 456, 214)
-addStaticProp(furnitureGroup, "prop_desk_chair", "desk-chair.png", 365, 216)
+addAnimatedImages(furnitureGroup, "prop_wall_lamp", lampFrames, 112, 103 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_desk", "desk.png", 338, 216 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_computer", "computer.png", 362, 173 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_book", "book.png", 456, 214 + SHIFT_Y)
+addStaticProp(furnitureGroup, "prop_desk_chair", "desk-chair.png", 365, 216 + SHIFT_Y)
 local bookcase = master:newGroup()
 bookcase.name = "prop_bookcase"
 bookcase.parent = furnitureGroup
-local caseX, caseY = 544, 71
+local caseX, caseY = 544, 71 + SHIFT_Y
 addStaticProp(bookcase, "frame", "bookcase/frame.png", caseX, caseY)
 
 local parts = {}
@@ -178,7 +181,7 @@ end
 -- 4. 黑板粉笔图
 local chalkGroup = master:newGroup()
 chalkGroup.name = "30_chalkboard"
-addStaticProp(chalkGroup, "prop_chalkboard_d1", "chalk-diagram.png", 157, 91)
+addStaticProp(chalkGroup, "prop_chalkboard_d1", "chalk-diagram.png", 157, 91 + SHIFT_Y)
 
 -- 便签共用纸片原稿。复制图层后，图层名即标题，User Data 文本即正文。
 local papers = master:newGroup()
@@ -188,9 +191,9 @@ local function pinNote(title, text, x, y)
   local layer = addStaticImage(papers, title, paperImage, x, y)
   layer.data = text
 end
-pinNote("On the board", "Join either end of a diameter to a third point on the circle. The angle at that point is a right angle.", 355, 93)
-pinNote("Reading marker", "The open book is at the triangle diagram. Compare it with the construction on the slate.", 365, 113)
-pinNote("Spare supplies", "Find the rolled plans, file folder and spare cable in the box beside the desk.", 356, 134)
+pinNote("On the board", "Join either end of a diameter to a third point on the circle. The angle at that point is a right angle.", 355, 93 + SHIFT_Y)
+pinNote("Reading marker", "The open book is at the triangle diagram. Compare it with the construction on the slate.", 365, 113 + SHIFT_Y)
+pinNote("Spare supplies", "Find the rolled plans, file folder and spare cable in the box beside the desk.", 356, 134 + SHIFT_Y)
 
 -- 5. 动态光源与屏幕
 local lightsGroup = master:newGroup()
@@ -199,7 +202,7 @@ local pulses = {}
 for i = 1, NUM_FRAMES do
   pulses[i] = Image{ fromFile = propDir .. "monitor-pulse-" .. i .. ".png" }
 end
-addAnimatedImages(lightsGroup, "prop_monitor_pulse", pulses, 362, 173)
+addAnimatedImages(lightsGroup, "prop_monitor_pulse", pulses, 362, 173 + SHIFT_Y)
 
 -- 6. 六大栏目颜色掩膜（默认隐藏）
 -- 掩膜直接从物件的 Alpha 轮廓生成，确保命中区贴着门、黑板、公告板、书柜、
@@ -211,12 +214,12 @@ maskLayer.isContinuous = true
 local maskImg = makeEmptyImg()
 
 local sectionMasks = {
-  { color = { 58, 215, 255 }, images = { { 349, 84, "noticeboard.png" } } },              -- News
-  { color = { 89, 226, 138 }, images = { { 132, 76, "chalkboard-frame.png" } } },         -- Research
-  { color = { 255, 210, 122 }, images = { { 338, 216, "desk.png" }, { 365, 216, "desk-chair.png" } } }, -- About
-  { color = { 255, 154, 120 }, images = { { 544, 71, "bookcase/frame.png" } } },          -- Notes
-  { color = { 214, 140, 255 }, images = { { 285, 240, "supply-box.png" } } },             -- Side quests
-  { color = { 255, 122, 168 }, images = { { 4, 66, "door.png" } } },                      -- Look outside
+  { color = { 58, 215, 255 }, images = { { 349, 84 + SHIFT_Y, "noticeboard.png" } } },              -- News
+  { color = { 89, 226, 138 }, images = { { 132, 76 + SHIFT_Y, "chalkboard-frame.png" } } },         -- Research
+  { color = { 255, 210, 122 }, images = { { 338, 216 + SHIFT_Y, "desk.png" }, { 365, 216 + SHIFT_Y, "desk-chair.png" } } }, -- About
+  { color = { 255, 154, 120 }, images = { { 544, 71 + SHIFT_Y, "bookcase/frame.png" } } },          -- Notes
+  { color = { 214, 140, 255 }, images = { { 285, 240 + SHIFT_Y, "supply-box.png" } } },             -- Side quests
+  { color = { 255, 122, 168 }, images = { { 4, 66 + SHIFT_Y, "door.png" } } },                      -- Look outside
 }
 
 for _, section in ipairs(sectionMasks) do

@@ -14,9 +14,11 @@ const root = process.cwd();
 const masterFile = resolve(root, room.master);
 const outDir = resolve(root, room.outDir);
 const propsDir = resolve(outDir, 'props');
+const tilesDir = resolve(outDir, 'tiles');
 const uiDir = resolve(outDir, 'ui');
 
 mkdirSync(propsDir, { recursive: true });
+mkdirSync(tilesDir, { recursive: true });
 mkdirSync(uiDir, { recursive: true });
 mkdirSync(resolve(masterFile, '..'), { recursive: true });
 

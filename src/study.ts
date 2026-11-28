@@ -49,6 +49,20 @@ export type PropSpec = {
   states: PropStateSpec[];
 };
 
+export type ExtensionTileSpec = {
+  src: string;
+  width: number;
+  height: number;
+};
+
+export type SceneExtensions = {
+  top?: ExtensionTileSpec;
+  bottom?: ExtensionTileSpec;
+  side?: ExtensionTileSpec;
+  left?: ExtensionTileSpec;
+  right?: ExtensionTileSpec;
+};
+
 export type SceneManifest = {
   artBase?: string;
   baseWidth: number;
@@ -58,8 +72,16 @@ export type SceneManifest = {
   exportHeight: number;
   background: string;
   hotspotMask: string;
+  extensions?: SceneExtensions;
   sections: SectionSpec[];
   props: PropSpec[];
+};
+
+type ExtensionLayers = {
+  top: HTMLDivElement;
+  bottom: HTMLDivElement;
+  left: HTMLDivElement;
+  right: HTMLDivElement;
 };
 
 type HotspotItem = {
@@ -76,13 +98,6 @@ type HotspotItem = {
   heightPercent: number;
   fallbackPath: string;
   prop?: PropSpec;
-};
-
-type BoundsRect = {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
 };
 
 function toRectPath(x: number, y: number, width: number, height: number): string {
@@ -194,16 +209,27 @@ export function mountStudy(
     allHotspots.map((spot) => [spot.id, spot]),
   );
 
-  const hotspotBounds: BoundsRect = sectionHotspots.length > 0
-    ? {
-        left: Math.min(...sectionHotspots.map((spot) => spot.xPercent)) / 100 * studyBase.width,
-        right: Math.max(...sectionHotspots.map((spot) => spot.xPercent + spot.widthPercent)) / 100 * studyBase.width,
-        top: Math.min(...sectionHotspots.map((spot) => spot.yPercent)) / 100 * studyBase.height,
-        bottom: Math.max(...sectionHotspots.map((spot) => spot.yPercent + spot.heightPercent)) / 100 * studyBase.height,
-      }
-    : { left: 0, right: studyBase.width, top: 0, bottom: studyBase.height };
-
   scene.style.setProperty('--study-ratio', `${studyBase.width} / ${studyBase.height}`);
+
+  // 四周同倍率 Tiled 延展带（方案 A）：挂在 #study-art 下方，非 16:9 屏幕自动无缝续铺墙/地/台基。
+  const makeExt = (name: string, tile?: ExtensionTileSpec) => {
+    const el = document.createElement('div');
+    el.className = `study-ext study-ext-${name}`;
+    el.setAttribute('aria-hidden', 'true');
+    el.hidden = true;
+    if (tile) el.style.backgroundImage = `url("${artRoot}${tile.src}")`;
+    return el;
+  };
+  const extLayers: ExtensionLayers = {
+    top: makeExt('top', sceneData.extensions?.top),
+    bottom: makeExt('bottom', sceneData.extensions?.bottom),
+    left: makeExt('left', sceneData.extensions?.left ?? sceneData.extensions?.side),
+    right: makeExt('right', sceneData.extensions?.right ?? sceneData.extensions?.side),
+  };
+  scene.insertBefore(extLayers.top, art);
+  scene.insertBefore(extLayers.bottom, art);
+  scene.insertBefore(extLayers.left, art);
+  scene.insertBefore(extLayers.right, art);
 
   const image = new Image(studyExport.width, studyExport.height);
   image.src = `${artRoot}${sceneData.background}`;
@@ -373,7 +399,7 @@ export function mountStudy(
     anchor.click();
   }
 
-  const resize = () => fitStudyToScene(scene, art, studyBase, hotspotBounds);
+  const resize = () => fitStudyToScene(scene, art, studyBase, extLayers, sceneData.extensions);
   new ResizeObserver(resize).observe(scene);
   resize();
 
@@ -588,47 +614,84 @@ export function mountStudy(
   });
 }
 
-const desktopInsets = { side: 0, top: 0, bottom: 0 };
-
 function fitStudyToScene(
   scene: HTMLElement,
   art: HTMLElement,
   studyBase: { width: number; height: number },
-  hotspotBounds: BoundsRect,
+  extLayers: ExtensionLayers,
+  extensions?: SceneExtensions,
 ) {
   const width = scene.clientWidth;
   const height = scene.clientHeight;
   if (!width || !height) return;
 
-  let scale = Math.min(width / studyBase.width, height / studyBase.height);
-  const desktop = !window.matchMedia('(max-width: 760px)').matches;
-  if (desktop) {
-    const cover = Math.max(width / studyBase.width, height / studyBase.height);
-    const boundsW = Math.max(1, hotspotBounds.right - hotspotBounds.left);
-    const boundsH = Math.max(1, hotspotBounds.bottom - hotspotBounds.top);
-    const fitHotspots = Math.min(
-      (width - 2 * desktopInsets.side) / boundsW,
-      (height - desktopInsets.top - desktopInsets.bottom) / boundsH,
-    );
-    scale = Math.min(cover, Math.max(0.1, fitHotspots));
-  }
+  // 策略 1：完整容纳 640×360 核心书房（16:9 铺满全屏），非 16:9 剩余区域由四周 Tiled 延展带无缝补齐。
+  const scale = Math.min(width / studyBase.width, height / studyBase.height);
+  const artWidth = Math.round(studyBase.width * scale);
+  const artHeight = Math.round(studyBase.height * scale);
+  const left = Math.round((width - artWidth) / 2);
+  const top = Math.round((height - artHeight) / 2);
+  const rightGap = width - (left + artWidth);
+  const bottomGap = height - (top + artHeight);
+  const scaleX = artWidth / studyBase.width;
+  const scaleY = artHeight / studyBase.height;
 
-  const artWidth = studyBase.width * scale;
-  const artHeight = studyBase.height * scale;
-  let left = (width - artWidth) / 2;
-  let top = (height - artHeight) / 2;
-  if (desktop) {
-    const leftLimit = desktopInsets.side - hotspotBounds.left * scale;
-    const rightLimit = width - desktopInsets.side - hotspotBounds.right * scale;
-    const topLimit = desktopInsets.top - hotspotBounds.top * scale;
-    const bottomLimit = height - desktopInsets.bottom - hotspotBounds.bottom * scale;
-    left = Math.max(leftLimit, Math.min(left, rightLimit));
-    top = Math.max(topLimit, Math.min(top, bottomLimit));
-  }
   Object.assign(art.style, {
     width: `${artWidth}px`, height: `${artHeight}px`,
     left: `${left}px`, top: `${top}px`,
   });
+
+  // 各延展带向 #study-art 下方多叠 1px，避免子像素舍入在接缝处漏出细缝。
+  if (extensions?.top && top > 0) {
+    extLayers.top.hidden = false;
+    Object.assign(extLayers.top.style, {
+      height: `${top + 1}px`,
+      backgroundSize: `${extensions.top.width * scaleX}px ${extensions.top.height * scaleY}px`,
+      backgroundPosition: `${left}px ${top}px`,
+    });
+  } else {
+    extLayers.top.hidden = true;
+  }
+
+  if (extensions?.bottom && bottomGap > 0) {
+    extLayers.bottom.hidden = false;
+    Object.assign(extLayers.bottom.style, {
+      top: `${top + artHeight - 1}px`,
+      backgroundSize: `${extensions.bottom.width * scaleX}px ${extensions.bottom.height * scaleY}px`,
+      backgroundPosition: `${left}px 1px`,
+    });
+  } else {
+    extLayers.bottom.hidden = true;
+  }
+
+  const leftTile = extensions?.left ?? extensions?.side;
+  if (leftTile && left > 0) {
+    const tileW = leftTile.width * scaleX;
+    extLayers.left.hidden = false;
+    Object.assign(extLayers.left.style, {
+      width: `${left + 1}px`,
+      top: `${top}px`,
+      height: `${artHeight}px`,
+      backgroundSize: `${tileW}px ${artHeight}px`,
+      backgroundPosition: `${left - tileW}px 0px`,
+    });
+  } else {
+    extLayers.left.hidden = true;
+  }
+
+  const rightTile = extensions?.right ?? extensions?.side;
+  if (rightTile && rightGap > 0) {
+    extLayers.right.hidden = false;
+    Object.assign(extLayers.right.style, {
+      left: `${left + artWidth - 1}px`,
+      top: `${top}px`,
+      height: `${artHeight}px`,
+      backgroundSize: `${rightTile.width * scaleX}px ${artHeight}px`,
+      backgroundPosition: `1px 0px`,
+    });
+  } else {
+    extLayers.right.hidden = true;
+  }
 
   // 同步 UI 像素单位 --px 与当前场景的 640×360 逻辑像素缩放比例（对齐物理像素，防止锯齿或过小）。
   const dpr = window.devicePixelRatio || 1;

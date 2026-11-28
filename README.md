@@ -28,8 +28,8 @@ Open the local address Vite prints. In the study:
 
 - Hover or click any of the six objects, or navigate with **Tab** and **Enter** / **Space**.
 - Click a pinned note to read its short text; click the surrounding board for **News**.
-- Press **Esc** or click outside a scroll to close it.
-- Append `?debug=hotspots` to the URL to inspect the 640×360 pixel hit mask and Marching Squares golden contours.
+- Press **Esc** or click outside a panel to close it.
+- Append `?debug=hotspots` to the URL to inspect the 640×360 pixel hit mask and Marching Squares contours.
 
 ## Edit the room
 
@@ -37,9 +37,9 @@ The editable master is [`artwork/study/room/study-master.aseprite`](artwork/stud
 
 Layer groups:
 
-- `00_room_base` — wall, window opening, floor and wall foot.
+- `00_room_base` — stone wall, dressed stone plinth (`y=292..301`), and one-point perspective stone floor (`y=302..359`).
 - `05_floor_light` — cool floor shade, lantern glow and window light, beneath the furniture.
-- `10_beyond` / `20_furniture` — window view, frame, door, chalkboard, desk, computer, book, chair and bookcase.
+- `10_beyond` / `20_furniture` — mountain-valley window view, frame, door, chalkboard, desk, computer, book, chair, bookcase, noticeboard and supply box.
 - `30_chalkboard` — the chalk diagram.
 - `35_notice_papers` — three pinned notes; layer name is the title, **User Data** is the text.
 - `40_lights_and_screens` — four-frame lantern flame and monitor pulse.
@@ -51,7 +51,7 @@ After editing layers in Aseprite, run:
 npm.cmd run art:export
 ```
 
-This invokes Aseprite CLI ([`scripts/export-study.mjs`](scripts/export-study.mjs)) to export the 3× room base, trim and export all static/animated props to `public/art/study/props/`, keep `hotspots.png` at 640×360, and regenerate [`src/study-scene.json`](src/study-scene.json).
+This invokes Aseprite CLI ([`scripts/export-study.mjs`](scripts/export-study.mjs)) to export the 3× room base, trim and export all static/animated props to `public/art/study/props/`, export 3× extension tiles (`tiles/`) and pixel UI frames (`ui/`), keep `hotspots.png` at 640×360, and regenerate [`src/study-scene.json`](src/study-scene.json).
 
 To rebuild the master from source, run:
 
@@ -59,13 +59,13 @@ To rebuild the master from source, run:
 npm.cmd run art:init
 ```
 
-`npm.cmd run art:repave` re-lays the floor from the wide-slab sheet before rebuilding. Use `art:export` for edits made directly in the master; `art:init` overwrites the master from the source assets.
+`npm.cmd run art:repave` re-paves `room-base.png` and the continuous perspective extension bands (`side-left.png`, `side-right.png`, `floor-bottom-tile.png`) from the 1× tile sources in [`artwork/study/room/tiles/`](artwork/study/room/tiles/) before rebuilding. Use `art:export` for edits made directly in the master; `art:init` overwrites the master from the source assets.
 
 To rearrange the bookcase, expand `20_furniture/prop_bookcase`. Each of its four shelves has a board and movable book groups built from the same [upright, leaning and stacked books](artwork/study/room/props/bookcase/). The whole cabinet exports as one `props/bookcase.png`; the brass tetrahedron lives in `shelf_3`.
 
 The lantern housing is stationary and only the four flame frames move. Its wall glow and floor pool are separate static layers. The monitor dot is a four-frame strip; per-state `durationMs` in [`scripts/export-study.lua`](scripts/export-study.lua) sets the lantern to 240 ms per frame and the monitor to 900 ms per frame.
 
-The floor uses [six wide slabs](artwork/study/room/tiles/large-flagstones.png), each 112×24 pixels, laid in four staggered courses. Paint on the indexed sheet with the warm-grey ramp (palette indices 8–15). The [AI mood reference](artwork/study/references/ai-mood.jpg) is a lighting/colour study generated from the room and the furnished reference; it is not loaded by the game.
+The stone wall, plinth, and perspective floor are generated from 1× source sheets in [`artwork/study/room/tiles/`](artwork/study/room/tiles/) (`wall-tile.png`, `plinth-stones.png`, `floor-pavers.png`) via [`scripts/pave-floor.lua`](scripts/pave-floor.lua). On non-16:9 desktop viewports, four pixel-aligned extension bands fill the extra space around the core 640×360 room without cropping furniture. The [AI mood reference](artwork/study/references/ai-mood.jpg) is a lighting/colour study generated from the room and the furnished reference; it is not loaded by the game.
 
 ## Edit the section content
 
