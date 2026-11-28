@@ -1,10 +1,8 @@
-// 页面入口：挂载 640×360 书房插画、背景音乐、阅读卷轴与门外风景弹窗。
+// 页面入口：挂载 640×360 书房插画、背景音乐、阅读弹窗与门外风景弹窗。
 import '@fontsource/pixelify-sans/latin-500.css';
-import '@fontsource/cinzel/latin-500.css';
-import '@fontsource/cinzel/latin-600.css';
-import '@fontsource-variable/space-grotesk';
-import '@fontsource-variable/eb-garamond';
-import '@fontsource-variable/eb-garamond/wght-italic.css';
+import '@fontsource/pixelify-sans/latin-600.css';
+import '@fontsource/pixelify-sans/latin-700.css';
+import '@fontsource/vt323/latin-400.css';
 import './style.css';
 import { mountMusic } from './music';
 import { mountReadingPanel } from './readingPanel';
@@ -19,8 +17,8 @@ function element<T extends HTMLElement>(id: string): T {
 
 function mountDoorDialog(dialog: HTMLDialogElement) {
   const closeButton = dialog.querySelector<HTMLButtonElement>('#close-door');
-  const shell = dialog.querySelector<HTMLElement>('.scroll-shell');
-  if (!closeButton || !shell) throw new Error('Missing door dialog structure');
+  const box = dialog.querySelector<HTMLElement>('.panel-box');
+  if (!closeButton || !box) throw new Error('Missing door dialog structure');
 
   let trigger: HTMLElement | null = null;
 
@@ -34,7 +32,7 @@ function mountDoorDialog(dialog: HTMLDialogElement) {
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => {
     if (event.target !== dialog) return;
-    const bounds = shell.getBoundingClientRect();
+    const bounds = box.getBoundingClientRect();
     const outside = event.clientX < bounds.left || event.clientX > bounds.right
       || event.clientY < bounds.top || event.clientY > bounds.bottom;
     if (outside) dialog.close();

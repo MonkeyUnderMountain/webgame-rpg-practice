@@ -11,11 +11,11 @@ local roomId = "study"
 
 local SECTION_SPECS = {
   { id = "news",     label = "News",         key = 1, priority = 2, labelBelow = false, outline = "all",     color = { 58, 215, 255 } },
-  { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = true,  outline = "all",     color = { 89, 226, 138 } },
+  { id = "research", label = "Research",     key = 2, priority = 3, labelBelow = false, outline = "all",     color = { 89, 226, 138 } },
   { id = "profile",  label = "About",        key = 3, priority = 6, labelBelow = false, outline = "all",     color = { 255, 210, 122 } },
-  { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = true,  outline = "largest", color = { 255, 154, 120 } },
+  { id = "notes",    label = "Notes",        key = 4, priority = 4, labelBelow = false, outline = "largest", color = { 255, 154, 120 } },
   { id = "quests",   label = "Side Quests",  key = 5, priority = 5, labelBelow = false, outline = "all",     color = { 214, 140, 255 } },
-  { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = true,  outline = "all",     color = { 255, 122, 168 } },
+  { id = "door",     label = "Look outside", key = 6, priority = 1, labelBelow = false, outline = "all",     color = { 255, 122, 168 } },
 }
 
 local room = {
@@ -608,3 +608,23 @@ f:close()
 print(string.format("[%s] Generated %s (%d section(s), %d modular prop(s)).", roomId, room.manifestPath, #exportedSections, #exportedProps))
 
 spr:close()
+
+-- 5. 同步按相同倍率导出 artwork/study/ui/*.png -> public/art/study/ui/*.png
+local uiSrcDir = "artwork/study/ui/"
+local uiOutDir = room.outDir .. "ui/"
+if app.fs.isDirectory(uiSrcDir) then
+  for _, file in ipairs(app.fs.listFiles(uiSrcDir)) do
+    if file:sub(-4) == ".png" then
+      local uiSpr = app.open(uiSrcDir .. file)
+      app.activeSprite = uiSpr
+      app.command.ChangePixelFormat{ format="rgb" }
+      local srcImg = uiSpr.cels[1] and uiSpr.cels[1].image
+      if srcImg then
+        local outImg = scaleImageNearest(srcImg, room.exportScale)
+        outImg:saveAs(uiOutDir .. file)
+        print(string.format("[ui] Exported ui/%s (%dx%d @ %dx)", file, srcImg.width, srcImg.height, room.exportScale))
+      end
+      uiSpr:close()
+    end
+  end
+end

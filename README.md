@@ -102,7 +102,7 @@ This type-checks the TypeScript source and builds the static site into `dist/`.
 | `scripts/` | Aseprite initialization, floor paving and export scripts |
 | `src/` | Scene runtime, hit-mask tracing, parchment panels and music control |
 | `content/home/` | Editable HTML for the five written sections |
-| `docs/` | [Architecture walkthrough](docs/ARCHITECTURE.md) and [editing guide](docs/EDITING_GUIDE.md) |
+| `docs/` | [Architecture walkthrough](docs/ARCHITECTURE.md), [editing guide](docs/EDITING_GUIDE.md) and [roadmap](docs/ROADMAP.md) |
 
 ## Credits
 

@@ -14,91 +14,71 @@
     <title>Tianle Yang · The Study</title>
   </head>
   <body>
-    <a class="skip-link" href="#homepage-navigation">Skip to navigation</a>
+    <a id="skip-link" href="#homepage-navigation">Skip to navigation</a>
 
-
-
-    <!-- 书房是一幅完整插画，物件按钮和轮廓共享图片坐标。 -->
-    <main>
-      <section class="study-view" id="study-view" aria-labelledby="page-title">
-        <header class="study-header">
-          <div class="study-identity">
-            <h1 id="page-title"><a href="./">Tianle Yang</a></h1>
-            <p>Mathematics · East China Normal University</p>
-          </div>
-          <nav id="homepage-navigation" aria-label="Homepage sections">
-            <a href="#profile" data-section="profile">About</a>
-            <a href="#notes" data-section="notes">Notes</a>
-            <a href="#news" data-section="news">News</a>
-            <a href="#research" data-section="research">Research</a>
-            <a href="#quests" data-section="quests">Side quests</a>
-          </nav>
-        </header>
-        <div class="study-scene" id="study-scene" aria-label="Explore the objects in my study">
-          <div class="study-art" id="study-art"></div>
-          <p class="study-art-error" id="study-art-error" role="status" hidden>The illustration could not load. The links above are still open.</p>
+    <!-- 书房插画与边缘导航：物件热点和轮廓由 src/study.ts 挂载到 #study-art。 -->
+    <main id="study-view" aria-labelledby="page-title">
+      <header>
+        <div>
+          <h1 id="page-title"><a href="./">Tianle Yang</a></h1>
+          <p>Mathematics · East China Normal University</p>
         </div>
-        <footer class="study-footer">
-          <div class="study-footer-meta">
-            <div class="footer-line">
-              <span>© 2026 Tianle Yang</span>
-              <button type="button" class="music-toggle" id="music-toggle" aria-pressed="false" aria-label="Play background music">
-                <span class="music-icon" aria-hidden="true">♪</span> <span id="music-text">Music off</span>
-              </button>
-            </div>
-            <span class="music-credit">
-              Music: <a href="https://pixabay.com/music/ambient-medieval-abbey-182197/" target="_blank" rel="noopener noreferrer">Medieval Abbey</a>
-              — matthewmikemusic, <a href="https://pixabay.com/service/license-summary/" target="_blank" rel="noopener noreferrer">Pixabay Content License</a>
-            </span>
-          </div>
-          <button type="button" class="door-link" data-open-door>Look outside</button>
-          <a href="mailto:10211510098@stu.ecnu.edu.cn">Contact</a>
-        </footer>
-      </section>
+        <nav id="homepage-navigation" aria-label="Homepage sections">
+          <a href="#profile" data-section="profile">About</a>
+          <a href="#notes" data-section="notes">Notes</a>
+          <a href="#news" data-section="news">News</a>
+          <a href="#research" data-section="research">Research</a>
+          <a href="#quests" data-section="quests">Side quests</a>
+        </nav>
+      </header>
+
+      <div id="study-scene" aria-label="Explore the objects in my study">
+        <div id="study-art"></div>
+        <p id="study-art-error" role="status" hidden>The illustration could not load. The links above are still open.</p>
+      </div>
+
+      <footer>
+        <p>
+          <span>© 2026 Tianle Yang</span>
+          <button type="button" id="music-toggle" aria-pressed="false" aria-label="Play background music">
+            <span aria-hidden="true">♪</span> <span id="music-text">Music off</span>
+          </button>
+        </p>
+        <small>
+          Music: <a href="https://pixabay.com/music/ambient-medieval-abbey-182197/" target="_blank" rel="noopener noreferrer">Medieval Abbey</a>
+          — matthewmikemusic, <a href="https://pixabay.com/service/license-summary/" target="_blank" rel="noopener noreferrer">Pixabay Content License</a>
+        </small>
+      </footer>
     </main>
-
-
 
     <audio id="study-music" loop preload="none" aria-hidden="true">
       <source src="./audio/study/medieval-abbey.mp3" type="audio/mpeg" />
     </audio>
 
-
-
-    <!-- 阅读资料与门外风景共用居中的羊皮卷轴样式。 -->
-    <dialog class="scroll-dialog reading-panel" id="section-dialog" aria-labelledby="section-title">
-      <div class="scroll-shell">
-        <div class="scroll-rod scroll-rod-top" aria-hidden="true"></div>
-        <div class="scroll-sheet">
-          <button type="button" class="close-button" id="close-section" aria-label="Close section">×</button>
-          <div class="scroll-content" id="section-body"></div>
-        </div>
-        <div class="scroll-rod scroll-rod-bottom" aria-hidden="true"></div>
+    <!-- 弹窗：默认使用基础像素 RPG 弹窗皮肤；后续可通过 data-panel 为每个栏目单独定制样式。 -->
+    <dialog class="panel" id="section-dialog" aria-labelledby="section-title">
+      <div class="panel-box">
+        <button type="button" class="panel-close" id="close-section" aria-label="Close section">×</button>
+        <div class="panel-body" id="section-body" tabindex="-1" autofocus></div>
       </div>
     </dialog>
 
-    <dialog class="scroll-dialog door-panel" id="door-dialog" aria-labelledby="door-title">
-      <div class="scroll-shell">
-        <div class="scroll-rod scroll-rod-top" aria-hidden="true"></div>
-        <div class="scroll-sheet">
-          <button type="button" class="close-button" id="close-door" aria-label="Close view">×</button>
-          <div class="scroll-content">
-            <p class="panel-kicker">BEYOND THE DOOR</p>
-            <h2 id="door-title">Outside the study</h2>
-            <figure class="door-figure">
-              <img src="./art/study/outside.svg" alt="Twilight view beyond the study door" width="960" height="540" />
-              <figcaption>A quiet glimpse beyond the study door. A scenic photograph or illustration will take this place later.</figcaption>
-            </figure>
-          </div>
+    <dialog class="panel" id="door-dialog" data-panel="door" aria-labelledby="door-title">
+      <div class="panel-box">
+        <button type="button" class="panel-close" id="close-door" aria-label="Close view">×</button>
+        <div class="panel-body" tabindex="-1" autofocus>
+          <p class="panel-kicker">BEYOND THE DOOR</p>
+          <h2 id="door-title">Outside the study</h2>
+          <figure>
+            <img src="./art/study/outside.svg" alt="Twilight view beyond the study door" width="960" height="540" />
+            <figcaption>A quiet glimpse beyond the study door. A scenic photograph or illustration will take this place later.</figcaption>
+          </figure>
         </div>
-        <div class="scroll-rod scroll-rod-bottom" aria-hidden="true"></div>
       </div>
     </dialog>
-
-
 
     <!-- 无 JavaScript 时仍可前往原来的学术主页。 -->
-    <noscript><p class="wrap">Enable JavaScript to explore, or visit the <a href="https://www.tianleyang.com/">academic homepage</a> for notes and contact information.</p></noscript>
+    <noscript><p>Enable JavaScript to explore, or visit the <a href="https://www.tianleyang.com/">academic homepage</a> for notes and contact information.</p></noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

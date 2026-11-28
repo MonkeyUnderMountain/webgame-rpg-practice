@@ -21,4 +21,4 @@ The site footer retains the track, artist, and license credit even though the li
 
 ## Fonts
 
-Pixelify Sans, Space Grotesk, Cinzel, and EB Garamond are bundled through the `@fontsource` packages. All four are licensed under the SIL Open Font License 1.1; the full licenses are included in their packages.
+Pixelify Sans and VT323 are bundled through the `@fontsource` packages. Both are licensed under the SIL Open Font License 1.1; the full licenses are included in their packages.

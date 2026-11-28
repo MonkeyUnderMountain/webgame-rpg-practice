@@ -31,7 +31,7 @@
       "width": 206,
       "height": 128,
       "priority": 3,
-      "labelBelow": true,
+      "labelBelow": false,
       "outline": "all"
     },
     {
@@ -57,7 +57,7 @@
       "width": 85,
       "height": 211,
       "priority": 4,
-      "labelBelow": true,
+      "labelBelow": false,
       "outline": "largest"
     },
     {
@@ -83,7 +83,7 @@
       "width": 104,
       "height": 212,
       "priority": 1,
-      "labelBelow": true,
+      "labelBelow": false,
       "outline": "all"
     }
   ],

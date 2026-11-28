@@ -629,4 +629,10 @@ function fitStudyToScene(
     width: `${artWidth}px`, height: `${artHeight}px`,
     left: `${left}px`, top: `${top}px`,
   });
+
+  // 同步 UI 像素单位 --px 与当前场景的 640×360 逻辑像素缩放比例（对齐物理像素，防止锯齿或过小）。
+  const dpr = window.devicePixelRatio || 1;
+  const snappedScale = Math.round(scale * dpr) / dpr;
+  const uiPixel = Math.max(2, Math.min(4, snappedScale));
+  document.documentElement.style.setProperty('--px', `${uiPixel}px`);
 }

@@ -24,10 +24,9 @@ function sectionFromHash(): SectionId | undefined {
 // 点击链接会添加历史记录。处理直接访问、后退和前进时，只同步面板。
 export function mountReadingPanel(dialog: HTMLDialogElement) {
   const body = dialog.querySelector<HTMLElement>('#section-body');
-  const sheet = dialog.querySelector<HTMLElement>('.scroll-sheet');
-  const shell = dialog.querySelector<HTMLElement>('.scroll-shell');
+  const box = dialog.querySelector<HTMLElement>('.panel-box');
   const closeButton = dialog.querySelector<HTMLButtonElement>('#close-section');
-  if (!body || !sheet || !shell || !closeButton) throw new Error('Missing reading panel elements');
+  if (!body || !box || !closeButton) throw new Error('Missing reading panel elements');
   const links = document.querySelectorAll<HTMLAnchorElement>('[data-section]');
 
   function markCurrentSection(id?: SectionId) {
@@ -38,9 +37,10 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
   }
 
   const showSection = (id: SectionId) => {
+    dialog.dataset.panel = id;
     body.innerHTML = sections[id];
     if (!dialog.open) dialog.showModal();
-    sheet.scrollTop = 0;
+    body.scrollTop = 0;
     markCurrentSection(id);
   };
 
@@ -62,6 +62,7 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
   }
   for (const paper of document.querySelectorAll<HTMLButtonElement>('button[data-notice-text]')) {
     paper.addEventListener('click', () => {
+      dialog.dataset.panel = 'notice';
       const title = document.createElement('h2');
       title.id = 'section-title';
       title.textContent = paper.getAttribute('aria-label');
@@ -70,7 +71,7 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
       text.textContent = paper.dataset.noticeText ?? '';
       body.replaceChildren(title, text);
       if (!dialog.open) dialog.showModal();
-      sheet.scrollTop = 0;
+      body.scrollTop = 0;
       markCurrentSection();
     });
   }
@@ -83,7 +84,7 @@ export function mountReadingPanel(dialog: HTMLDialogElement) {
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (event) => {
     if (event.target !== dialog) return;
-    const bounds = shell.getBoundingClientRect();
+    const bounds = box.getBoundingClientRect();
     const outside = event.clientX < bounds.left || event.clientX > bounds.right
       || event.clientY < bounds.top || event.clientY > bounds.bottom;
     if (outside) dialog.close();
